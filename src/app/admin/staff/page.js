@@ -93,33 +93,46 @@ export default function AdminStaffPage() {
     }
   };
 
-  // Toggle a special permission for a staff member (super admin only)
-  const handleTogglePermission = async (staffId, permKey, currentPerms) => {
+  // Toggle a permission for a staff member (super admin only).
+  // - Non-default perms: use extraPermissions (add/remove).
+  // - Default role perms: use revokedPermissions (add/remove) to explicitly revoke or restore.
+  const handleTogglePermission = async (staffId, permKey, member) => {
     if (!isSuperAdmin()) { toast.error('Only Super Admin can grant permissions'); return; }
-    const has = (currentPerms || []).includes(permKey);
+
+    const roleDef = USER_ROLES.find(r => r.id === member.role);
+    const isRoleDefault = member.role === 'super_admin' || (roleDef?.permissions?.includes(permKey) || false);
+    const isRevoked = (member.revokedPermissions || []).includes(permKey);
+    const isExtra = (member.extraPermissions || []).includes(permKey);
+    // currently active = (default and not revoked) OR extra granted
+    const currentlyActive = isRoleDefault ? !isRevoked : isExtra;
+
     setSavingPerm(true);
     try {
-      await updateDoc(doc(db, 'users', staffId), {
-        extraPermissions: has ? arrayRemove(permKey) : arrayUnion(permKey),
-      });
-      setStaff(p => p.map(s => {
-        if (s.id !== staffId) return s;
-        const extra = s.extraPermissions || [];
-        return {
-          ...s,
-          extraPermissions: has ? extra.filter(x => x !== permKey) : [...extra, permKey],
-        };
-      }));
-      if (permTarget?.id === staffId) {
-        setPermTarget(prev => {
-          const extra = prev.extraPermissions || [];
-          return {
-            ...prev,
-            extraPermissions: has ? extra.filter(x => x !== permKey) : [...extra, permKey],
-          };
-        });
+      let updatePayload;
+      if (isRoleDefault) {
+        // Toggle revoked state for a default permission
+        updatePayload = { revokedPermissions: currentlyActive ? arrayUnion(permKey) : arrayRemove(permKey) };
+      } else {
+        // Toggle extra grant for a non-default permission
+        updatePayload = { extraPermissions: currentlyActive ? arrayRemove(permKey) : arrayUnion(permKey) };
       }
-      toast.success(has ? 'Permission revoked' : 'Permission granted');
+      await updateDoc(doc(db, 'users', staffId), updatePayload);
+
+      // Sync local state
+      const updateMember = (s) => {
+        if (s.id !== staffId) return s;
+        if (isRoleDefault) {
+          const revoked = s.revokedPermissions || [];
+          return { ...s, revokedPermissions: currentlyActive ? [...revoked, permKey] : revoked.filter(x => x !== permKey) };
+        } else {
+          const extra = s.extraPermissions || [];
+          return { ...s, extraPermissions: currentlyActive ? extra.filter(x => x !== permKey) : [...extra, permKey] };
+        }
+      };
+      setStaff(p => p.map(updateMember));
+      setPermTarget(prev => prev ? updateMember(prev) : prev);
+
+      toast.success(currentlyActive ? 'Permission revoked' : 'Permission granted');
     } catch (err) {
       console.error(err);
       toast.error('Failed to update permission');
@@ -131,13 +144,17 @@ export default function AdminStaffPage() {
   const roleLabels = { super_admin: 'Super Admin', admin: 'Admin', staff: 'Staff' };
   const roleColors = { super_admin: '#f59e0b', admin: '#3b82f6', staff: '#22c55e' };
 
-  // Effective permissions: role defaults + extraPermissions granted by super admin
+  // Effective permissions: (role defaults - revokedPermissions) + extraPermissions
   const checkRolePermission = (member, permKey) => {
-    if (member.role === 'super_admin') return true;
+    if (member.role === 'super_admin') {
+      const isRevoked = (member.revokedPermissions || []).includes(permKey);
+      return !isRevoked;
+    }
     const roleDef = USER_ROLES.find(r => r.id === member.role);
     const roleHas = roleDef?.permissions?.includes(permKey) || false;
+    const isRevoked = (member.revokedPermissions || []).includes(permKey);
     const extraHas = (member.extraPermissions || []).includes(permKey);
-    return roleHas || extraHas;
+    return (roleHas && !isRevoked) || extraHas;
   };
 
   const SUPER_ADMIN_GRANTABLE = PERMISSIONS_LIST.filter(p => p.key !== 'all_permissions');
@@ -317,57 +334,50 @@ export default function AdminStaffPage() {
             </div>
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-                Special permissions can be customized for each team member. Default role permissions are locked.
+                All permissions can be customized per team member. <span style={{ color: 'rgba(255,255,255,0.3)' }}>Permissions marked "Default" are part of their role but can still be revoked.</span>
               </p>
               {SUPER_ADMIN_GRANTABLE.map(perm => {
-                const isDefault = permTarget.role === 'super_admin' || 
-                  (USER_ROLES.find(r => r.id === permTarget.role)?.permissions?.includes(perm.key) || false);
-                const granted = isDefault || (permTarget.extraPermissions || []).includes(perm.key);
+                const roleDef = USER_ROLES.find(r => r.id === permTarget.role);
+                const isDefault = permTarget.role === 'super_admin' ||
+                  (roleDef?.permissions?.includes(perm.key) || false);
+                const isRevoked = (permTarget.revokedPermissions || []).includes(perm.key);
+                const isExtra = (permTarget.extraPermissions || []).includes(perm.key);
+                const granted = isDefault ? !isRevoked : isExtra;
 
                 return (
-                  <div key={perm.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: `1px solid ${isDefault ? 'rgba(255,255,255,0.05)' : granted ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+                  <div key={perm.key} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px',
+                    border: `1px solid ${granted ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.15)'}`,
+                    transition: 'border-color 0.2s',
+                  }}>
                     <div>
                       <p style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {perm.name}
-                        {isDefault && <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)', borderRadius: '4px', fontWeight: 600 }}>Default</span>}
+                        {isDefault && <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', borderRadius: '4px', fontWeight: 600 }}>Default</span>}
                       </p>
                       <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{perm.desc}</p>
                     </div>
-                    {isDefault ? (
-                      <span
-                        style={{
-                          flexShrink: 0, marginLeft: '1rem',
-                          padding: '0.375rem 0.875rem',
-                          borderRadius: '20px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          background: 'rgba(255,255,255,0.05)',
-                          color: 'rgba(255,255,255,0.4)',
-                        }}
-                      >
-                        Role Default
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleTogglePermission(permTarget.id, perm.key, permTarget.extraPermissions)}
-                        disabled={savingPerm}
-                        style={{
-                          flexShrink: 0, marginLeft: '1rem',
-                          padding: '0.375rem 0.875rem',
-                          borderRadius: '20px',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          background: granted ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
-                          color: granted ? '#ef4444' : '#22c55e',
-                          fontFamily: 'var(--font-sans)',
-                          transition: 'all 0.2s',
-                        }}
-                      >
-                        {granted ? 'Revoke' : 'Grant'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleTogglePermission(permTarget.id, perm.key, permTarget)}
+                      disabled={savingPerm}
+                      style={{
+                        flexShrink: 0, marginLeft: '1rem',
+                        padding: '0.375rem 0.875rem',
+                        borderRadius: '20px',
+                        border: 'none',
+                        cursor: savingPerm ? 'not-allowed' : 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        background: granted ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+                        color: granted ? '#ef4444' : '#22c55e',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'all 0.2s',
+                        opacity: savingPerm ? 0.5 : 1,
+                      }}
+                    >
+                      {granted ? 'Revoke' : 'Grant'}
+                    </button>
                   </div>
                 );
               })}
