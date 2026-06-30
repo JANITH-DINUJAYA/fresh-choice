@@ -7,11 +7,6 @@ import { formatPrice, formatDate } from '@/lib/constants';
 import { Search, Mail, Phone, Calendar, DollarSign, ShoppingBag } from 'lucide-react';
 import styles from './page.module.css';
 
-const SAMPLE_CUSTOMERS = [
-  { id: 'c1', name: 'Asel Perera', email: 'asel@gmail.com', phone: '0771234567', totalSpent: 4200, orderCount: 3, lastOrderDate: '2026-06-29T12:00:00Z' },
-  { id: 'c2', name: 'Kavindi Silva', email: 'kavindi@yahoo.com', phone: '0719876543', totalSpent: 1330, orderCount: 1, lastOrderDate: '2026-06-30T10:30:00Z' },
-];
-
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,26 +18,49 @@ export default function AdminCustomersPage() {
 
   const fetchCustomers = async () => {
     try {
-      const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'customer')));
-      if (!snap.empty) {
-        // Calculate LTV by matching with orders (simulated/aggregated or directly query)
-        const custs = snap.docs.map(d => ({ id: d.id, ...d.data(), totalSpent: d.data().totalSpent || 0, orderCount: d.data().orderCount || 0 }));
-        setCustomers(custs);
+      // Fetch all customers
+      const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'customer')));
+      const custs = usersSnap.docs.map(d => ({ id: d.id, ...d.data(), totalSpent: 0, orderCount: 0, lastOrderDate: null }));
+
+      // Fetch all orders and compute stats per customer
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const statsMap = {};
+      for (const order of orders) {
+        const cid = order.customerId;
+        if (!cid) continue;
+        if (!statsMap[cid]) statsMap[cid] = { totalSpent: 0, orderCount: 0, lastOrderDate: null };
+        statsMap[cid].totalSpent += order.total || 0;
+        statsMap[cid].orderCount += 1;
+        const orderTime = order.createdAt?.toMillis?.() || 0;
+        const lastTime = statsMap[cid].lastOrderDate?.toMillis?.() || 0;
+        if (orderTime > lastTime) statsMap[cid].lastOrderDate = order.createdAt;
+      }
+
+      // Merge stats into customers
+      const enriched = custs.map(c => ({
+        ...c,
+        ...(statsMap[c.id] || {}),
+      }));
+
+      if (enriched.length > 0) {
+        setCustomers(enriched);
       } else {
-        setCustomers(SAMPLE_CUSTOMERS);
+        setCustomers([]);
       }
     } catch (err) {
       console.error(err);
-      setCustomers(SAMPLE_CUSTOMERS);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filtered = customers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search)
+    (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.phone || '').includes(search)
   );
 
   return (
@@ -70,6 +88,12 @@ export default function AdminCustomersPage() {
 
       {loading ? (
         <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner" /></div>
+      ) : filtered.length === 0 ? (
+        <div className={styles.tableCard}>
+          <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: '3rem' }}>
+            {search ? 'No customers match your search.' : 'No customers found. They will appear once users sign up.'}
+          </p>
+        </div>
       ) : (
         <div className={styles.tableCard}>
           <div className={styles.tableWrap}>
@@ -88,9 +112,9 @@ export default function AdminCustomersPage() {
                   <tr key={c.id} className={styles.row}>
                     <td>
                       <div className={styles.infoCol}>
-                        <div className={styles.avatar}>{c.name[0]}</div>
+                        <div className={styles.avatar}>{(c.name || '?')[0]}</div>
                         <div>
-                          <p className={styles.name}>{c.name}</p>
+                          <p className={styles.name}>{c.name || '—'}</p>
                           <p className={styles.id}>ID: #{c.id.slice(-6).toUpperCase()}</p>
                         </div>
                       </div>
@@ -98,7 +122,7 @@ export default function AdminCustomersPage() {
                     <td>
                       <div className={styles.contactCol}>
                         <p className={styles.contactItem}><Mail size={12} /> {c.email}</p>
-                        <p className={styles.contactItem}><Phone size={12} /> {c.phone}</p>
+                        <p className={styles.contactItem}><Phone size={12} /> {c.phone || '—'}</p>
                       </div>
                     </td>
                     <td>
@@ -120,9 +144,6 @@ export default function AdminCustomersPage() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
-                  <tr><td colSpan={5} className={styles.empty}>No customers found</td></tr>
-                )}
               </tbody>
             </table>
           </div>

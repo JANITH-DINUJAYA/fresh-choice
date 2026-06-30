@@ -77,6 +77,25 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleUndoVerifyPayment = async (orderId) => {
+    if (!confirm('Undo payment verification? This will revert the status back to awaiting verification.')) return;
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, { paymentStatus: 'awaiting_verification', updatedAt: serverTimestamp() });
+      toast.success('Payment verification undone');
+      setOrders(p => p.map(o => o.id === orderId ? { ...o, paymentStatus: 'awaiting_verification' } : o));
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(p => ({ ...p, paymentStatus: 'awaiting_verification' }));
+      }
+    } catch {
+      setOrders(p => p.map(o => o.id === orderId ? { ...o, paymentStatus: 'awaiting_verification' } : o));
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(p => ({ ...p, paymentStatus: 'awaiting_verification' }));
+      }
+      toast.success('Verification undone (simulated)');
+    }
+  };
+
   const getStatus = (key) => ORDER_STATUSES.find(s => s.key === key) || ORDER_STATUSES[0];
 
   const getStatusIcon = (key) => {
@@ -279,9 +298,19 @@ export default function AdminOrdersPage() {
                       <span className={`${styles.payStatus} ${selectedOrder.paymentStatus === 'paid' ? styles.paid : styles.unverified}`}>
                         {selectedOrder.paymentStatus === 'paid' ? 'Payment Verified' : 'Awaiting verification'}
                       </span>
-                      {selectedOrder.paymentStatus !== 'paid' && (
+                      {selectedOrder.paymentStatus !== 'paid' ? (
                         <button className="btn btn-primary btn-sm" onClick={() => handleVerifyPayment(selectedOrder.id)} id="verify-payment-btn">
                           <Check size={12} /> Verify Payment
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
+                          onClick={() => handleUndoVerifyPayment(selectedOrder.id)}
+                          id="undo-verify-btn"
+                          title="Undo verification if marked by mistake"
+                        >
+                          Undo Verification
                         </button>
                       )}
                     </div>

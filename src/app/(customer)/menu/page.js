@@ -21,7 +21,7 @@ const SAMPLE_MEALS = [
 ];
 
 export default function MenuPage() {
-  const [meals, setMeals] = useState(SAMPLE_MEALS);
+  const [meals, setMeals] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('default');
@@ -36,9 +36,13 @@ export default function MenuPage() {
       const snap = await getDocs(collection(db, 'meals'));
       if (!snap.empty) {
         setMeals(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } else {
+        // Only fall back to samples if Firestore has no meals
+        setMeals(SAMPLE_MEALS);
       }
-    } catch {}
-    finally { setLoading(false); }
+    } catch {
+      setMeals(SAMPLE_MEALS);
+    } finally { setLoading(false); }
   };
 
   const filtered = meals

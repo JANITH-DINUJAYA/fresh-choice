@@ -79,6 +79,15 @@ export function AuthProvider({ children }) {
 
   const signOut = () => firebaseSignOut(auth);
 
+  const refreshUserProfile = async () => {
+    if (auth.currentUser) {
+      const profileDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (profileDoc.exists()) {
+        setUserProfile(profileDoc.data());
+      }
+    }
+  };
+
   const isAdmin = () => {
     const adminRoles = ['super_admin', 'admin', 'staff'];
     return userProfile && adminRoles.includes(userProfile.role);
@@ -100,6 +109,7 @@ export function AuthProvider({ children }) {
         isAdmin,
         isSuperAdmin,
         isStaff,
+        refreshUserProfile,
       }}
     >
       {children}

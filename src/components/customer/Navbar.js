@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingCart, Menu, X, User, LogOut, ChevronDown, Phone, Shield } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useCart } from '@/lib/cart';
 import CartDrawer from './CartDrawer';
@@ -12,6 +13,7 @@ import styles from './Navbar.module.css';
 export default function Navbar() {
   const { user, userProfile, signOut } = useAuth();
   const { itemCount } = useCart();
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -46,29 +48,31 @@ export default function Navbar() {
     { href: '/contact', label: 'Contact' },
   ];
 
-  return (
-    <>
-      {/* Top Banner Announcement Bar */}
-      <div className={styles.topBar}>
-        <div className="container">
-          <div className={styles.topBarInner}>
-            <div className={styles.topBarContact}>
-              <Phone size={12} />
-              <a href="tel:+94000000000">+94 000 000 000</a>
-            </div>
-            <p className={styles.topBarText}>
-              Free delivery on Colombo City orders above Rs. 2,000!
-            </p>
-            <div className={styles.topBarSocials}>
-              <a href="https://www.tiktok.com/@fresh.choice.sl" target="_blank" rel="noopener noreferrer" className={styles.topBarLink}>
-                Follow us on TikTok
-              </a>
+      const isHomeTransparent = pathname === '/' && !isScrolled;
+
+      return (
+        <>
+          {/* Top Banner Announcement Bar */}
+          <div className={styles.topBar}>
+            <div className="container">
+              <div className={styles.topBarInner}>
+                <div className={styles.topBarContact}>
+                  <Phone size={12} />
+                  <a href="tel:+94000000000">+94 000 000 000</a>
+                </div>
+                <p className={styles.topBarText}>
+                  Free delivery on Colombo City orders above Rs. 2,000!
+                </p>
+                <div className={styles.topBarSocials}>
+                  <a href="https://www.tiktok.com/@fresh.choice.sl" target="_blank" rel="noopener noreferrer" className={styles.topBarLink}>
+                    Follow us on TikTok
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ''}`}>
+          <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ''} ${isHomeTransparent ? styles.homeTransparent : ''}`}>
         <div className="container">
           <div className={styles.inner}>
             {/* Logo */}

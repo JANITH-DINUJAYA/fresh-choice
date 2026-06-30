@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { updateProfile, updatePassword } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import toast from 'react-hot-toast';
 import {
   LayoutDashboard, UtensilsCrossed, ShoppingBag, Package,
-  Users, UserCog, LogOut, Menu, X, ChevronRight,
+  Users, UserCog, LogOut, Menu, X, ChevronRight, MessageSquare, UserCircle, Edit3, Loader2, Key
 } from 'lucide-react';
 import styles from './AdminSidebar.module.css';
 
@@ -16,17 +20,89 @@ const NAV = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, roles: ['super_admin', 'admin', 'staff'] },
   { href: '/admin/meals', label: 'Meals', icon: UtensilsCrossed, roles: ['super_admin', 'admin'] },
   { href: '/admin/inventory', label: 'Inventory', icon: Package, roles: ['super_admin', 'admin', 'staff'] },
-  { href: '/admin/customers', label: 'Customers', icon: Users, roles: ['super_admin', 'admin'] },
+  { href: '/admin/customers', label: 'Customers', icon: Users, roles: ['super_admin', 'admin'], perm: 'view_customers' },
+  { href: '/admin/messages', label: 'Messages', icon: MessageSquare, roles: ['super_admin'], perm: 'view_messages' },
   { href: '/admin/staff', label: 'Staff & Roles', icon: UserCog, roles: ['super_admin', 'admin'] },
 ];
 
 export default function AdminSidebar() {
-  const { userProfile, signOut } = useAuth();
+  const { userProfile, signOut, refreshUserProfile } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Edit Profile States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (userProfile) {
+      setName(userProfile.name || '');
+      setPhone(userProfile.phone || '');
+    }
+  }, [userProfile, showEditModal]);
+
   const role = userProfile?.role || 'staff';
-  const allowed = NAV.filter(n => n.roles.includes(role));
+  const extraPerms = userProfile?.extraPermissions || [];
+  const allowed = NAV.filter(n => {
+    if (!n.roles.includes(role)) {
+      // Check if granted via extraPermissions
+      if (n.perm && extraPerms.includes(n.perm)) return true;
+      return false;
+    }
+    return true;
+  });
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error('Name cannot be empty');
+      return;
+    }
+
+    setSaving(true);
+    const toastId = toast.loading('Updating profile details...');
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('No user is currently signed in');
+
+      // 1. Update Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        name: name.trim(),
+        phone: phone.trim(),
+        updatedAt: new Date()
+      });
+
+      // 2. Update Firebase Auth Profile
+      await updateProfile(currentUser, {
+        displayName: name.trim()
+      });
+
+      // 3. Update Password if entered
+      if (password) {
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
+        await updatePassword(currentUser, password);
+        setPassword('');
+      }
+
+      // 4. Refresh auth state
+      await refreshUserProfile();
+
+      toast.success('Profile details updated successfully!', { id: toastId });
+      setShowEditModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to update profile details', { id: toastId });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const roleLabels = { super_admin: 'Super Admin', admin: 'Admin', staff: 'Staff' };
   const roleColors = { super_admin: '#f59e0b', admin: '#3b82f6', staff: '#22c55e' };
@@ -87,6 +163,10 @@ export default function AdminSidebar() {
               <p className={styles.userEmail}>{userProfile?.email}</p>
             </div>
           </div>
+          <button className={styles.editProfileBtn} onClick={() => setShowEditModal(true)} id="admin-edit-profile-btn">
+            <Edit3 size={14} />
+            Edit Profile Details
+          </button>
           <button className={styles.signoutBtn} onClick={signOut} id="admin-signout-btn">
             <LogOut size={16} />
             Sign Out
@@ -96,6 +176,59 @@ export default function AdminSidebar() {
           </Link>
         </div>
       </aside>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <h2>Edit Profile Details</h2>
+              <button className={styles.modalClose} onClick={() => setShowEditModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleSaveProfile} className={styles.modalForm}>
+              <div className="form-group">
+                <label className="form-label">Full Name *</label>
+                <input
+                  id="profile-name"
+                  className="form-input"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Janith Dinujaya"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Phone Number</label>
+                <input
+                  id="profile-phone"
+                  className="form-input"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="e.g. +94 77 123 4567"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">New Password (leave empty to keep current)</label>
+                <input
+                  id="profile-password"
+                  type="password"
+                  className="form-input"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                />
+              </div>
+              <div className={styles.modalActions}>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving} id="profile-save-btn">
+                  {saving ? <Loader2 className={styles.spin} size={15} /> : null}
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

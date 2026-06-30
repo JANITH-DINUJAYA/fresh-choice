@@ -362,3 +362,46 @@
 @media (max-width: 480px) {
   .userNameText { display: none; }
 }
+
+/* Home Transparent styles */
+.navbar.homeTransparent {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.navbar.homeTransparent .logoText {
+  color: white;
+}
+.navbar.homeTransparent .navLink {
+  color: rgba(255, 255, 255, 0.85);
+}
+.navbar.homeTransparent .navLink:hover {
+  color: white;
+}
+.navbar.homeTransparent .cartBtn {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.navbar.homeTransparent .cartBtn:hover {
+  background: white;
+  color: var(--fc-green-950);
+  border-color: white;
+}
+.navbar.homeTransparent .userBtn {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.navbar.homeTransparent .userBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.navbar.homeTransparent .mobileToggle {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.navbar.homeTransparent .mobileToggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

@@ -52,7 +52,8 @@ export const USER_ROLES = [
   { 
     id: 'admin', 
     label: 'Admin', 
-    permissions: ['manage_meals', 'manage_orders', 'view_inventory', 'view_customers']
+    permissions: ['manage_meals', 'manage_orders', 'view_inventory']
+    // view_customers and view_messages are NOT default — granted by super admin individually
   },
   { 
     id: 'staff', 

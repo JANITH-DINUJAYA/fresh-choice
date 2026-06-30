@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 import { ORDER_STATUSES, formatPrice, formatDate, BANK_DETAILS } from '@/lib/constants';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import { Clock, CheckCircle, Package, Truck, XCircle, ChevronRight, Upload, Loader2, ArrowRight, Clipboard, ShieldAlert, FileText } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -23,15 +24,24 @@ export default function OrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const q = query(collection(db, 'orders'), where('customerId', '==', user.uid), orderBy('createdAt', 'desc'));
+      // Use simple where query without orderBy to avoid needing composite index
+      const q = query(collection(db, 'orders'), where('customerId', '==', user.uid));
       const snap = await getDocs(q);
-      setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort client-side by createdAt descending
+      data.sort((a, b) => {
+        const aTime = a.createdAt?.toMillis?.() || 0;
+        const bTime = b.createdAt?.toMillis?.() || 0;
+        return bTime - aTime;
+      });
+      setOrders(data);
     } catch (err) {
-      console.error(err);
+      console.error('Orders fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(BANK_DETAILS.accountNumber);

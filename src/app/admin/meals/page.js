@@ -1,50 +1,68 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { useState, useEffect, useRef } from 'react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { CATEGORIES, formatPrice } from '@/lib/constants';
+import { CATEGORIES } from '@/lib/constants';
+import { formatPrice } from '@/lib/constants';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, Search, SlidersHorizontal, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Eye, EyeOff, Loader2, Image as ImageIcon, X, Tag, ChevronDown } from 'lucide-react';
 import styles from './page.module.css';
 
-const SAMPLE_MEALS = [
-  { id: 's1', name: 'Garden Fresh Salad', price: 850, category: 'salads', description: 'Crisp greens, cherry tomatoes, cucumber', isAvailable: true, badge: 'Popular', portionSize: 'Regular (350g)', ingredients: ['Lettuce', 'Tomatoes', 'Cucumber'] },
-  { id: 's2', name: 'Sri Lankan Rice & Curry', price: 650, category: 'rice-curry', description: 'Fragrant rice with authentic curry', isAvailable: true, badge: '', portionSize: 'Full Plate', ingredients: ['Rice', 'Dhal', 'Pol Sambol'] },
-  { id: 's3', name: 'Protein Power Bowl', price: 950, category: 'bowls', description: 'Quinoa, grilled veggies, chickpeas', isAvailable: true, badge: 'New', portionSize: 'Regular (400g)', ingredients: ['Quinoa', 'Chickpeas', 'Avocado'] },
-  { id: 's4', name: 'Green Detox Smoothie', price: 380, category: 'drinks', description: 'Spinach, banana, coconut water', isAvailable: true, badge: '', portionSize: '350ml', ingredients: ['Spinach', 'Banana', 'Coconut Water'] },
-];
+const IMGBB_KEY = 'bbfda5a6eaea6c85b9c3125b4c8cc463';
 
 export default function AdminMealsPage() {
   const [meals, setMeals] = useState([]);
+  const [dbCategories, setDbCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState(CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  
-  // Modal states
+
+  // Meal modal states
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({
-    name: '', price: '', category: 'salads', portionSize: '',
+    name: '', price: '', category: '', portionSize: '',
     description: '', ingredientsRaw: '', badge: '', isAvailable: true,
   });
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Category modal states
+  const [showCatModal, setShowCatModal] = useState(false);
+  const [catForm, setCatForm] = useState({ label: '', id: '' });
+  const [editCatId, setEditCatId] = useState(null);
+  const [savingCat, setSavingCat] = useState(false);
 
   useEffect(() => {
-    fetchMeals();
+    fetchAll();
   }, []);
 
-  const fetchMeals = async () => {
+  const fetchAll = async () => {
+    setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'meals'));
-      if (!snap.empty) {
-        setMeals(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } else {
-        setMeals(SAMPLE_MEALS);
+      // Fetch meals
+      const mealsSnap = await getDocs(collection(db, 'meals'));
+      const mealsData = mealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setMeals(mealsData);
+
+      // Fetch custom categories
+      const catSnap = await getDocs(collection(db, 'categories'));
+      const customCats = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setDbCategories(customCats);
+
+      // Merge: built-in + custom, dedup by id
+      const merged = [...CATEGORIES];
+      for (const c of customCats) {
+        if (!merged.find(m => m.id === c.id)) merged.push(c);
       }
+      setAllCategories(merged);
     } catch (err) {
       console.error(err);
-      setMeals(SAMPLE_MEALS);
     } finally {
       setLoading(false);
     }
@@ -52,7 +70,9 @@ export default function AdminMealsPage() {
 
   const handleOpenAdd = () => {
     setEditId(null);
-    setForm({ name: '', price: '', category: 'salads', portionSize: '', description: '', ingredientsRaw: '', badge: '', isAvailable: true });
+    setForm({ name: '', price: '', category: allCategories[0]?.id || '', portionSize: '', description: '', ingredientsRaw: '', badge: '', isAvailable: true });
+    setImageFile(null);
+    setImagePreview(null);
     setShowModal(true);
   };
 
@@ -61,26 +81,45 @@ export default function AdminMealsPage() {
     setForm({
       name: meal.name || '',
       price: meal.price || '',
-      category: meal.category || 'salads',
+      category: meal.category || allCategories[0]?.id || '',
       portionSize: meal.portionSize || '',
       description: meal.description || '',
       ingredientsRaw: meal.ingredients ? meal.ingredients.join(', ') : '',
       badge: meal.badge || '',
       isAvailable: meal.isAvailable !== undefined ? meal.isAvailable : true,
     });
+    setImageFile(null);
+    setImagePreview(meal.imageUrl || null);
     setShowModal(true);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadImageToImgbb = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (data?.data?.url) return data.data.url;
+    throw new Error('imgbb upload failed');
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this meal?')) return;
     try {
       await deleteDoc(doc(db, 'meals', id));
-      toast.success('Meal deleted successfully');
+      toast.success('Meal deleted');
       setMeals(p => p.filter(m => m.id !== id));
     } catch {
-      toast.error('Failed to delete meal from Firestore');
-      // For mock data
-      setMeals(p => p.filter(m => m.id !== id));
+      toast.error('Failed to delete meal');
     }
   };
 
@@ -88,8 +127,8 @@ export default function AdminMealsPage() {
     const newVal = !meal.isAvailable;
     try {
       await updateDoc(doc(db, 'meals', meal.id), { isAvailable: newVal });
-      toast.success(`Availability updated`);
       setMeals(p => p.map(m => m.id === meal.id ? { ...m, isAvailable: newVal } : m));
+      toast.success('Availability updated');
     } catch {
       setMeals(p => p.map(m => m.id === meal.id ? { ...m, isAvailable: newVal } : m));
     }
@@ -97,59 +136,111 @@ export default function AdminMealsPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.price) {
-      toast.error('Please fill in required fields');
-      return;
-    }
+    if (!form.name || !form.price) { toast.error('Please fill in required fields'); return; }
     setSaving(true);
 
-    const ingredients = form.ingredientsRaw
-      ? form.ingredientsRaw.split(',').map(i => i.trim()).filter(Boolean)
-      : [];
-
-    const mealData = {
-      name: form.name,
-      price: Number(form.price),
-      category: form.category,
-      portionSize: form.portionSize,
-      description: form.description,
-      ingredients,
-      badge: form.badge,
-      isAvailable: form.isAvailable,
-      updatedAt: serverTimestamp(),
-    };
+    let imageUrl = imagePreview && !imageFile ? imagePreview : null;
 
     try {
+      if (imageFile) {
+        setImageUploading(true);
+        imageUrl = await uploadImageToImgbb(imageFile);
+        setImageUploading(false);
+      }
+
+      const ingredients = form.ingredientsRaw
+        ? form.ingredientsRaw.split(',').map(i => i.trim()).filter(Boolean)
+        : [];
+
+      const mealData = {
+        name: form.name,
+        price: Number(form.price),
+        category: form.category,
+        portionSize: form.portionSize,
+        description: form.description,
+        ingredients,
+        badge: form.badge,
+        isAvailable: form.isAvailable,
+        imageUrl: imageUrl || null,
+        updatedAt: serverTimestamp(),
+      };
+
       if (editId) {
         await updateDoc(doc(db, 'meals', editId), mealData);
-        toast.success('Meal updated successfully');
-        setMeals(p => p.map(m => m.id === editId ? { ...m, ...mealData, id: editId } : m));
+        toast.success('Meal updated');
+        setMeals(p => p.map(m => m.id === editId ? { ...m, ...mealData } : m));
       } else {
         const ref = await addDoc(collection(db, 'meals'), { ...mealData, createdAt: serverTimestamp() });
-        toast.success('Meal added successfully');
-        setMeals(p => [{ ...mealData, id: ref.id }, ...p]);
+        toast.success('Meal added');
+        setMeals(p => [...p, { ...mealData, id: ref.id }]);
       }
       setShowModal(false);
     } catch (err) {
       console.error(err);
-      toast.error('Saved locally (Firestore error)');
-      // Local fallback
-      const tempId = editId || `local-${Date.now()}`;
-      const mockResult = { ...mealData, id: tempId };
-      if (editId) {
-        setMeals(p => p.map(m => m.id === editId ? mockResult : m));
-      } else {
-        setMeals(p => [mockResult, ...p]);
-      }
-      setShowModal(false);
+      toast.error('Error saving meal');
     } finally {
       setSaving(false);
+      setImageUploading(false);
+    }
+  };
+
+  // --- Category management ---
+  const handleOpenAddCat = () => {
+    setEditCatId(null);
+    setCatForm({ label: '', id: '' });
+    setShowCatModal(true);
+  };
+
+  const handleOpenEditCat = (cat) => {
+    setEditCatId(cat.id);
+    setCatForm({ label: cat.label, id: cat.id });
+    setShowCatModal(true);
+  };
+
+  const handleDeleteCat = async (catId) => {
+    // Only allow deleting custom (non-built-in) categories
+    if (CATEGORIES.find(c => c.id === catId)) { toast.error('Cannot delete a built-in category'); return; }
+    if (!confirm('Delete this category?')) return;
+    try {
+      await deleteDoc(doc(db, 'categories', catId));
+      setDbCategories(p => p.filter(c => c.id !== catId));
+      setAllCategories(p => p.filter(c => c.id !== catId));
+      toast.success('Category deleted');
+    } catch {
+      toast.error('Failed to delete category');
+    }
+  };
+
+  const handleSaveCat = async (e) => {
+    e.preventDefault();
+    if (!catForm.label) { toast.error('Category name required'); return; }
+    setSavingCat(true);
+    const slugId = editCatId || catForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const catData = { label: catForm.label, id: slugId, icon: '', slug: slugId };
+    try {
+      await setDoc(doc(db, 'categories', slugId), catData);
+      if (editCatId) {
+        setDbCategories(p => p.map(c => c.id === editCatId ? catData : c));
+        setAllCategories(p => p.map(c => c.id === editCatId ? catData : c));
+        toast.success('Category updated');
+      } else {
+        setDbCategories(p => [...p, catData]);
+        setAllCategories(p => [...p, catData]);
+        toast.success('Category added');
+      }
+      setShowCatModal(false);
+    } catch {
+      toast.error('Failed to save category');
+    } finally {
+      setSavingCat(false);
     }
   };
 
   const filtered = meals
     .filter(m => activeCategory === 'all' || m.category === activeCategory)
     .filter(m => !search || m.name.toLowerCase().includes(search.toLowerCase()));
+
+  const getCatLabel = (id) => allCategories.find(c => c.id === id)?.label || id;
 
   return (
     <div className={styles.container}>
@@ -158,9 +249,14 @@ export default function AdminMealsPage() {
           <h1 className={styles.title}>Meal Management</h1>
           <p className={styles.sub}>Create and configure daily menu offerings.</p>
         </div>
-        <button className="btn btn-primary" onClick={handleOpenAdd} id="admin-add-meal">
-          <Plus size={18} /> Add New Meal
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn btn-ghost" onClick={handleOpenAddCat} id="admin-add-category" style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <Tag size={16} /> Manage Categories
+          </button>
+          <button className="btn btn-primary" onClick={handleOpenAdd} id="admin-add-meal">
+            <Plus size={18} /> Add New Meal
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search */}
@@ -177,23 +273,19 @@ export default function AdminMealsPage() {
           />
         </div>
         <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${activeCategory === 'all' ? styles.active : ''}`}
-            onClick={() => setActiveCategory('all')}
-          >All</button>
-          {CATEGORIES.map(c => (
+          <button className={`${styles.tab} ${activeCategory === 'all' ? styles.active : ''}`} onClick={() => setActiveCategory('all')}>All</button>
+          {allCategories.map(c => (
             <button
               key={c.id}
               className={`${styles.tab} ${activeCategory === c.id ? styles.active : ''}`}
               onClick={() => setActiveCategory(c.id)}
             >
-              {c.icon} {c.label}
+              {c.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Meals Table/List */}
       {loading ? (
         <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner" /></div>
       ) : (
@@ -202,6 +294,7 @@ export default function AdminMealsPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
+                  <th>Image</th>
                   <th>Meal Name</th>
                   <th>Category</th>
                   <th>Portion</th>
@@ -215,19 +308,27 @@ export default function AdminMealsPage() {
                 {filtered.map(meal => (
                   <tr key={meal.id} className={styles.row}>
                     <td>
+                      <div className={styles.thumbCell}>
+                        {meal.imageUrl ? (
+                          <img src={meal.imageUrl} alt={meal.name} className={styles.thumbImg} />
+                        ) : (
+                          <div className={styles.thumbPlaceholder}><ImageIcon size={16} /></div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
                       <div>
                         <p className={styles.mealName}>{meal.name}</p>
                         <p className={styles.mealDesc}>{meal.description}</p>
                       </div>
                     </td>
-                    <td><span className={styles.catBadge}>{meal.category}</span></td>
+                    <td><span className={styles.catBadge}>{getCatLabel(meal.category)}</span></td>
                     <td className={styles.dimText}>{meal.portionSize || '—'}</td>
                     <td className={styles.priceCell}>{formatPrice(meal.price)}</td>
                     <td>
                       <button
                         className={`${styles.statusToggle} ${meal.isAvailable ? styles.available : styles.unavailable}`}
                         onClick={() => handleToggleAvailability(meal)}
-                        title="Toggle availability"
                         id={`toggle-avail-${meal.id}`}
                       >
                         {meal.isAvailable ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -246,7 +347,7 @@ export default function AdminMealsPage() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} className={styles.empty}>No meals found</td></tr>
+                  <tr><td colSpan={8} className={styles.empty}>No meals found</td></tr>
                 )}
               </tbody>
             </table>
@@ -254,15 +355,49 @@ export default function AdminMealsPage() {
         </div>
       )}
 
-      {/* Edit/Add Modal */}
+      {/* Add/Edit Meal Modal */}
       {showModal && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
+          <div className={styles.modal} style={{ maxWidth: '560px' }}>
             <div className={styles.modalHead}>
               <h2>{editId ? 'Edit Meal' : 'Add New Meal'}</h2>
               <button className={styles.modalClose} onClick={() => setShowModal(false)}>×</button>
             </div>
             <form onSubmit={handleSave} className={styles.modalForm}>
+              {/* Image Upload */}
+              <div className={styles.imageUploadArea}>
+                <p className={styles.imageUploadLabel}>Meal Photo</p>
+                <div className={styles.imageUploadRow}>
+                  {imagePreview ? (
+                    <div className={styles.previewBox}>
+                      <img src={imagePreview} alt="Preview" className={styles.previewImg} />
+                      <button type="button" className={styles.removeImg} onClick={() => { setImageFile(null); setImagePreview(null); }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.uploadPlaceholder} onClick={() => fileInputRef.current?.click()}>
+                      <ImageIcon size={24} style={{ color: 'rgba(255,255,255,0.3)' }} />
+                      <span>Click to upload image</span>
+                      <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>Uploaded to ImgBB</span>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className={styles.hiddenFileInput}
+                    id="meal-image-upload"
+                  />
+                  {!imagePreview && (
+                    <button type="button" className={styles.uploadTrigger} onClick={() => fileInputRef.current?.click()}>
+                      <Plus size={14} /> Choose Image
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="form-group">
                 <label className="form-label">Meal Name *</label>
                 <input id="modal-meal-name" className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Garden Fresh Salad" required />
@@ -274,8 +409,8 @@ export default function AdminMealsPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Category *</label>
-                  <select id="modal-meal-category" className="form-input form-select" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                    {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  <select id="modal-meal-category" className={`form-input ${styles.lightSelect}`} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                    {allCategories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
                 </div>
               </div>
@@ -305,12 +440,66 @@ export default function AdminMealsPage() {
               </div>
               <div className={styles.modalActions}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving} id="modal-meal-save">
-                  {saving ? <Loader2 className={styles.spin} size={16} /> : null}
-                  {editId ? 'Save Changes' : 'Create Meal'}
+                <button type="submit" className="btn btn-primary" disabled={saving || imageUploading} id="modal-meal-save">
+                  {(saving || imageUploading) ? <Loader2 className={styles.spin} size={16} /> : null}
+                  {saving ? 'Saving...' : imageUploading ? 'Uploading Image...' : editId ? 'Save Changes' : 'Create Meal'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Category Management Modal */}
+      {showCatModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <h2>Manage Categories</h2>
+              <button className={styles.modalClose} onClick={() => setShowCatModal(false)}>×</button>
+            </div>
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Existing categories list */}
+              <div>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>All Categories</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {allCategories.map(cat => {
+                    const isBuiltIn = !!CATEGORIES.find(c => c.id === cat.id);
+                    return (
+                      <div key={cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div>
+                          <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>{cat.label}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem' }}>{cat.id}</span>
+                          {isBuiltIn && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: '4px' }}>built-in</span>}
+                        </div>
+                        {!isBuiltIn && (
+                          <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => handleDeleteCat(cat.id)} title="Delete category"><Trash2 size={13} /></button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Add new category */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Add New Category</p>
+                <form onSubmit={handleSaveCat} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                  <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                    <input
+                      className={`form-input ${styles.lightSelectInput}`}
+                      value={catForm.label}
+                      onChange={e => setCatForm({ label: e.target.value, id: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-') })}
+                      placeholder="e.g. Wraps & Sandwiches"
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={savingCat} style={{ flexShrink: 0 }}>
+                    {savingCat ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />} Add
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}

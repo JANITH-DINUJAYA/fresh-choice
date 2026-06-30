@@ -34,7 +34,8 @@ export default function MealCard({ meal }) {
     toast.success(`${meal.name} added to cart!`, { duration: 2000 });
   };
 
-  const imageSrc = meal.images?.[0] || UNSPLASH_IMAGES[meal.category] || '/logo.png';
+  const imageSrc = meal.imageUrl || UNSPLASH_IMAGES[meal.category] || '/logo.png';
+  const isImgbb = imageSrc && imageSrc.includes('ibb.co');
   const isOutOfStock = !meal.isAvailable || meal.stock === 0;
   const isLowStock = meal.stock > 0 && meal.stock <= 10;
 
@@ -43,14 +44,24 @@ export default function MealCard({ meal }) {
       {/* Image */}
       <div className={styles.imgWrapper}>
         <div className={styles.imageOverlay} />
-        <Image
-          src={imageSrc}
-          alt={meal.name}
-          fill
-          style={{ objectFit: 'cover' }}
-          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className={styles.mealImg}
-        />
+        {isImgbb ? (
+          // Use regular img for ImgBB uploaded images (avoids Next.js optimizer)
+          <img
+            src={imageSrc}
+            alt={meal.name}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            className={styles.mealImg}
+          />
+        ) : (
+          <Image
+            src={imageSrc}
+            alt={meal.name}
+            fill
+            style={{ objectFit: 'cover' }}
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className={styles.mealImg}
+          />
+        )}
         
         {isOutOfStock ? (
           <div className={styles.soldOut}>Sold Out</div>

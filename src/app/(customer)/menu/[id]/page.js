@@ -12,6 +12,14 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, ShoppingCart, Clock, ShieldCheck, Heart, Share2, Sparkles } from 'lucide-react';
 import styles from './page.module.css';
 
+const UNSPLASH_IMAGES = {
+  salads: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+  'rice-curry': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80',
+  bowls: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
+  drinks: 'https://images.unsplash.com/photo-1610970881699-44a5587caa9a?auto=format&fit=crop&w=800&q=80',
+  snacks: 'https://images.unsplash.com/photo-1626700051175-6518c4793f4f?auto=format&fit=crop&w=800&q=80',
+};
+
 const SAMPLE_MEALS = {
   s1: { id: 's1', name: 'Garden Fresh Salad', price: 850, category: 'salads', description: 'A refreshing mix of seasonal organic greens, cherry tomatoes, crisp cucumber, shredded carrots, and red onions. Served with our chef\'s signature house lemon-vinaigrette dressing on the side.', ingredients: ['Organic Lettuce', 'Cherry Tomatoes', 'English Cucumber', 'Red Onions', 'Lemon-Vinaigrette'], portionSize: 'Regular (350g)', isAvailable: true, badge: 'Popular', rating: 4.8 },
   s2: { id: 's2', name: 'Sri Lankan Rice & Curry', price: 650, category: 'rice-curry', description: 'Fragrant red basmati rice served with three traditional vegetable curries, a flavorful dhal curry, crispy papadam, and coconut sambol. Cooked using stone-pressed coconut oil.', ingredients: ['Red Basmati Rice', 'Dhal Curry', 'Pol Sambol', 'Gotukola Mallum', 'Papadam'], portionSize: 'Full Plate', isAvailable: true, rating: 4.9 },
@@ -52,12 +60,16 @@ export default function MealDetailPage() {
 
   const handleAddToCart = () => {
     if (!meal || !meal.isAvailable) return;
+    if (meal.stock !== undefined && qty > meal.stock) {
+      toast.error(`Only ${meal.stock} items left in stock`);
+      return;
+    }
     for (let i = 0; i < qty; i++) {
       addItem({
         id: meal.id,
         name: meal.name,
         price: meal.price,
-        image: meal.images?.[0] || null,
+        image: meal.imageUrl || meal.images?.[0] || UNSPLASH_IMAGES[meal.category] || null,
         category: meal.category,
       });
     }
@@ -83,6 +95,11 @@ export default function MealDetailPage() {
     );
   }
 
+  const imageSrc = meal.imageUrl || meal.images?.[0] || UNSPLASH_IMAGES[meal.category] || '/logo.png';
+  const isImgbb = imageSrc && imageSrc.includes('ibb.co');
+  const isOutOfStock = !meal.isAvailable || meal.stock === 0;
+  const isLowStock = meal.stock > 0 && meal.stock <= 10;
+
   return (
     <div className={styles.page}>
       <div className="container">
@@ -94,20 +111,28 @@ export default function MealDetailPage() {
           {/* Left: Image */}
           <div className={styles.imageSection}>
             <div className={styles.imageContainer}>
-              {meal.images?.[0] ? (
+              {isImgbb ? (
+                <img
+                  src={imageSrc}
+                  alt={meal.name}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
                 <Image
-                  src={meal.images[0]}
+                  src={imageSrc}
                   alt={meal.name}
                   fill
                   style={{ objectFit: 'cover' }}
                   priority
                 />
-              ) : (
-                <div className={styles.imagePlaceholder}>
-                  {meal.category === 'salads' ? '🥗' : meal.category === 'rice-curry' ? '🍛' : '🥙'}
-                </div>
               )}
-              {meal.badge && <span className={styles.badge}>{meal.badge}</span>}
+              {isOutOfStock ? (
+                <span className={styles.soldOutBadge}>Sold Out</span>
+              ) : isLowStock ? (
+                <span className={styles.lowStockBadge}>Only {meal.stock} Left!</span>
+              ) : meal.badge ? (
+                <span className={styles.badge}>{meal.badge}</span>
+              ) : null}
             </div>
           </div>
 
@@ -157,12 +182,22 @@ export default function MealDetailPage() {
             </div>
 
             {/* Actions */}
-            {meal.isAvailable ? (
+            {isOutOfStock ? (
+              <div className={styles.soldOut}>
+                This meal is currently sold out for today. Please check back tomorrow!
+              </div>
+            ) : (
               <div className={styles.actionRow}>
                 <div className={styles.qtySelector}>
                   <button className={styles.qtyBtn} onClick={() => setQty(q => Math.max(1, q - 1))} id="qty-dec">-</button>
                   <span className={styles.qtyValue}>{qty}</span>
-                  <button className={styles.qtyBtn} onClick={() => setQty(q => q + 1)} id="qty-inc">+</button>
+                  <button className={styles.qtyBtn} onClick={() => setQty(q => {
+                    if (meal.stock !== undefined && q + 1 > meal.stock) {
+                      toast.error(`Only ${meal.stock} items left in stock`);
+                      return q;
+                    }
+                    return q + 1;
+                  })} id="qty-inc">+</button>
                 </div>
                 <button
                   className="btn btn-primary"
@@ -172,10 +207,6 @@ export default function MealDetailPage() {
                 >
                   <ShoppingCart size={18} /> Add to Cart — {formatPrice(meal.price * qty)}
                 </button>
-              </div>
-            ) : (
-              <div className={styles.soldOut}>
-                This meal is currently sold out for today. Please check back tomorrow!
               </div>
             )}
           </div>

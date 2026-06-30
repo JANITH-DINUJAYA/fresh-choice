@@ -27,6 +27,10 @@
 .row:hover td { background: rgba(255,255,255,0.02); }
 .row:last-child td { border-bottom: none; }
 
+.thumbCell { width: 52px; }
+.thumbImg { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.08); }
+.thumbPlaceholder { width: 48px; height: 48px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); }
+
 .mealName { font-weight: 600; color: white; font-size: 0.9rem; }
 .mealDesc { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -58,12 +62,12 @@
 
 .empty { text-align: center; color: rgba(255,255,255,0.3); padding: 2rem; }
 
-/* Modal styles */
+/* Modal */
 .modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: var(--z-modal); display: flex; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(4px); }
-.modal { background: #13161d; border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-xl); max-width: 500px; width: 100%; box-shadow: var(--shadow-xl); overflow: hidden; animation: modalIn 0.2s ease-out; }
+.modal { background: #13161d; border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-xl); max-width: 500px; width: 100%; box-shadow: var(--shadow-xl); overflow: hidden; max-height: 90vh; overflow-y: auto; animation: modalIn 0.2s ease-out; }
 @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-.modalHead { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.modalHead { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 0; background: #13161d; z-index: 1; }
 .modalHead h2 { font-family: var(--font-serif); font-size: 1.25rem; color: white; }
 .modalClose { font-size: 1.5rem; color: rgba(255,255,255,0.4); background: none; border: none; cursor: pointer; }
 .modalClose:hover { color: white; }
@@ -71,9 +75,64 @@
 .modalForm { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.125rem; }
 .formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .modalForm input, .modalForm select, .modalForm textarea {
-  background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); color: white;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1.5px solid rgba(255,255,255,0.12) !important;
+  color: white !important;
 }
-.modalForm input:focus, .modalForm select:focus, .modalForm textarea:focus { border-color: #22c55e; }
+.modalForm select option {
+  background: #1a1d26 !important;
+  color: #ffffff !important;
+}
+.modalForm input:focus, .modalForm select:focus, .modalForm textarea:focus { border-color: #22c55e !important; }
+.modalForm input::placeholder, .modalForm textarea::placeholder { color: rgba(255,255,255,0.3) !important; }
+
+/* Fixed select with visible text */
+.lightSelect {
+  background: rgba(255,255,255,0.07) !important;
+  color: white !important;
+  border: 1.5px solid rgba(255,255,255,0.12) !important;
+}
+.lightSelect option {
+  background: #1e2130 !important;
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+.lightSelectInput {
+  background: rgba(255,255,255,0.07) !important;
+  color: white !important;
+  border: 1.5px solid rgba(255,255,255,0.12) !important;
+}
+
+/* Image Upload */
+.imageUploadArea { display: flex; flex-direction: column; gap: 0.5rem; }
+.imageUploadLabel { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.05em; }
+.imageUploadRow { display: flex; align-items: center; gap: 1rem; }
+.previewBox { position: relative; display: inline-block; }
+.previewImg { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; border: 2px solid rgba(34,197,94,0.4); }
+.removeImg {
+  position: absolute; top: -6px; right: -6px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #ef4444; color: white; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.uploadPlaceholder {
+  width: 80px; height: 80px; border-radius: 10px;
+  border: 2px dashed rgba(255,255,255,0.15);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  cursor: pointer; font-size: 0.65rem; color: rgba(255,255,255,0.35); text-align: center;
+  transition: border-color 0.2s;
+}
+.uploadPlaceholder:hover { border-color: #22c55e; }
+.hiddenFileInput { display: none; }
+.uploadTrigger {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 0.875rem; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-size: 0.8rem;
+  transition: all 0.2s; font-family: var(--font-sans);
+}
+.uploadTrigger:hover { background: rgba(255,255,255,0.1); color: white; }
 
 .toggleRow { margin-top: 0.25rem; }
 .checkboxLabel { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: rgba(255,255,255,0.7); cursor: pointer; }

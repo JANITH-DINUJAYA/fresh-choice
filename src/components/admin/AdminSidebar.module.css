@@ -88,3 +88,32 @@
   transition: color var(--transition-fast);
 }
 .viewSiteBtn:hover { color: rgba(255,255,255,0.6); }
+
+.editProfileBtn {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.5rem 0.875rem; border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7);
+  font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08); font-family: var(--font-sans);
+  transition: all var(--transition-fast); width: 100%;
+}
+.editProfileBtn:hover { background: rgba(255,255,255,0.1); color: white; }
+
+/* Modal styles */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: var(--z-modal); display: flex; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(4px); }
+.modal { background: #13161d; border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-xl); max-width: 440px; width: 100%; box-shadow: var(--shadow-xl); overflow: hidden; animation: modalIn 0.2s ease-out; color: white; }
+@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modalHead { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.modalHead h2 { font-family: var(--font-serif); font-size: 1.25rem; color: white; margin: 0; }
+.modalClose { font-size: 1.5rem; color: rgba(255,255,255,0.4); background: none; border: none; cursor: pointer; }
+.modalClose:hover { color: white; }
+
+.modalForm { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.125rem; }
+.modalForm input { background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 0.625rem; border-radius: 6px; }
+.modalForm input:focus { border-color: #22c55e; outline: none; }
+
+.modalActions { display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.25rem; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

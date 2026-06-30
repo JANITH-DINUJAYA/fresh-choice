@@ -71,7 +71,7 @@ export default function AboutPage() {
             {[
               { num: '500+', label: 'Happy Customers' },
               { num: '30+', label: 'Menu Items' },
-              { num: '4.9★', label: 'Average Rating' },
+              { num: '4.9', label: 'Average Rating' },
               { num: '3', label: 'Delivery Zones' },
             ].map((s, i) => (
               <div key={i} className={styles.statCard}>

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, where, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 import { USER_ROLES } from '@/lib/constants';
 import toast from 'react-hot-toast';
-import { Shield, UserPlus, Key, ToggleLeft, ToggleRight, Lock, Eye, EyeOff, Check, X, ShieldAlert } from 'lucide-react';
+import { Shield, UserPlus, ToggleLeft, ToggleRight, Lock, Check, X, ShieldAlert, Key } from 'lucide-react';
 import styles from './page.module.css';
 
 const SAMPLE_STAFF = [
@@ -16,11 +16,12 @@ const SAMPLE_STAFF = [
 ];
 
 const PERMISSIONS_LIST = [
-  { key: 'all_permissions', name: 'Root Super-Admin Access', desc: 'Allows complete control of all settings, including creating/editing staff.' },
-  { key: 'manage_meals', name: 'Manage Meals Catalog', desc: 'Allows adding, editing, and deleting items from the menu.' },
-  { key: 'manage_orders', name: 'Order Processing', desc: 'Allows modifying order status (Confirm, Prep, Ready, Deliver, Cancel).' },
-  { key: 'view_inventory', name: 'Daily Inventory Control', desc: 'Allows modifying active batch stocks and resetting counts.' },
-  { key: 'view_customers', name: 'View Customer LTV Logs', desc: 'Allows viewing customer contact logs and order stats.' },
+  { key: 'all_permissions', name: 'Root Super-Admin Access', desc: 'Allows complete control of all settings, including creating/editing staff.', superAdminOnly: false },
+  { key: 'manage_meals', name: 'Manage Meals Catalog', desc: 'Allows adding, editing, and deleting items from the menu.', superAdminOnly: false },
+  { key: 'manage_orders', name: 'Order Processing', desc: 'Allows modifying order status (Confirm, Prep, Ready, Deliver, Cancel).', superAdminOnly: false },
+  { key: 'view_inventory', name: 'Daily Inventory Control', desc: 'Allows modifying active batch stocks and resetting counts.', superAdminOnly: false },
+  { key: 'view_customers', name: 'View Customer LTV Logs', desc: 'Allows viewing customer contact logs and order stats. Not granted by default — super admin only.', superAdminOnly: true },
+  { key: 'view_messages', name: 'Customer Messages Inbox', desc: 'Allows viewing and replying to customer contact messages. Not granted by default — super admin only.', superAdminOnly: true },
 ];
 
 export default function AdminStaffPage() {
@@ -28,14 +29,15 @@ export default function AdminStaffPage() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal / Add form states
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'staff' });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchStaff();
-  }, []);
+  // Permission grant modal
+  const [permTarget, setPermTarget] = useState(null);
+  const [savingPerm, setSavingPerm] = useState(false);
+
+  useEffect(() => { fetchStaff(); }, []);
 
   const fetchStaff = async () => {
     try {
@@ -55,35 +57,21 @@ export default function AdminStaffPage() {
   };
 
   const handleToggleStatus = async (user) => {
-    if (user.role === 'super_admin') {
-      toast.error('Super Admin status cannot be changed');
-      return;
-    }
+    if (user.role === 'super_admin') { toast.error('Super Admin status cannot be changed'); return; }
     const nextVal = !user.isActive;
     try {
       await updateDoc(doc(db, 'users', user.id), { isActive: nextVal });
-      toast.success(`User status updated`);
+      toast.success('User status updated');
       setStaff(p => p.map(s => s.id === user.id ? { ...s, isActive: nextVal } : s));
     } catch {
       setStaff(p => p.map(s => s.id === user.id ? { ...s, isActive: nextVal } : s));
-      toast.success(`Simulated user status update`);
     }
   };
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-    
-    // Check if the current user profile is allowed to create staff
-    const currentRole = userProfile?.role || 'staff';
-    if (currentRole !== 'super_admin') {
-      toast.error('Permission Denied: Only Super Admin can create team members');
-      return;
-    }
-
+    if (!form.name || !form.email || !form.password) { toast.error('Please fill in all fields'); return; }
+    if (userProfile?.role !== 'super_admin') { toast.error('Only Super Admin can create team members'); return; }
     setSaving(true);
     try {
       const res = await fetch('/api/admin/users', {
@@ -93,32 +81,66 @@ export default function AdminStaffPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create user');
-      
-      toast.success('Staff account created successfully!');
+      toast.success('Staff account created!');
       setStaff(p => [...p, { id: data.uid, name: form.name, email: form.email, role: form.role, isActive: true }]);
       setShowModal(false);
       setForm({ name: '', email: '', password: '', role: 'staff' });
     } catch (err) {
       console.error(err);
-      toast.error('Saved locally (Simulated creation)');
-      setStaff(p => [...p, { id: `local-${Date.now()}`, name: form.name, email: form.email, role: form.role, isActive: true }]);
-      setShowModal(false);
-      setForm({ name: '', email: '', password: '', role: 'staff' });
+      toast.error(err.message || 'Failed to create user');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Toggle a special permission for a staff member (super admin only)
+  const handleTogglePermission = async (staffId, permKey, currentPerms) => {
+    if (!isSuperAdmin()) { toast.error('Only Super Admin can grant permissions'); return; }
+    const has = (currentPerms || []).includes(permKey);
+    setSavingPerm(true);
+    try {
+      await updateDoc(doc(db, 'users', staffId), {
+        extraPermissions: has ? arrayRemove(permKey) : arrayUnion(permKey),
+      });
+      setStaff(p => p.map(s => {
+        if (s.id !== staffId) return s;
+        const extra = s.extraPermissions || [];
+        return {
+          ...s,
+          extraPermissions: has ? extra.filter(x => x !== permKey) : [...extra, permKey],
+        };
+      }));
+      if (permTarget?.id === staffId) {
+        setPermTarget(prev => {
+          const extra = prev.extraPermissions || [];
+          return {
+            ...prev,
+            extraPermissions: has ? extra.filter(x => x !== permKey) : [...extra, permKey],
+          };
+        });
+      }
+      toast.success(has ? 'Permission revoked' : 'Permission granted');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update permission');
+    } finally {
+      setSavingPerm(false);
     }
   };
 
   const roleLabels = { super_admin: 'Super Admin', admin: 'Admin', staff: 'Staff' };
   const roleColors = { super_admin: '#f59e0b', admin: '#3b82f6', staff: '#22c55e' };
 
-  // Helper to check if a role has a specific permission
-  const checkRolePermission = (roleId, permissionKey) => {
-    const roleDef = USER_ROLES.find(r => r.id === roleId);
-    if (!roleDef) return false;
-    if (roleDef.permissions.includes('all_permissions')) return true;
-    return roleDef.permissions.includes(permissionKey);
+  // Effective permissions: role defaults + extraPermissions granted by super admin
+  const checkRolePermission = (member, permKey) => {
+    if (member.role === 'super_admin') return true;
+    const roleDef = USER_ROLES.find(r => r.id === member.role);
+    const roleHas = roleDef?.permissions?.includes(permKey) || false;
+    const extraHas = (member.extraPermissions || []).includes(permKey);
+    return roleHas || extraHas;
   };
+
+  const SUPER_ADMIN_GRANTABLE = PERMISSIONS_LIST.filter(p => p.superAdminOnly);
 
   return (
     <div className={styles.container}>
@@ -132,9 +154,7 @@ export default function AdminStaffPage() {
             <UserPlus size={18} /> Add Team Member
           </button>
         ) : (
-          <div className={styles.roleHeaderAlert}>
-            <Lock size={14} /> Only Super Admin can manage members
-          </div>
+          <div className={styles.roleHeaderAlert}><Lock size={14} /> Only Super Admin can manage members</div>
         )}
       </div>
 
@@ -142,7 +162,7 @@ export default function AdminStaffPage() {
         <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner" /></div>
       ) : (
         <div className={styles.mainGrid}>
-          {/* Left Block: Staff Records list */}
+          {/* Staff Table */}
           <div className={styles.tableCard}>
             <h2 className={styles.sectionTitle}>Active Team Directory</h2>
             <div className={styles.tableWrap}>
@@ -161,7 +181,7 @@ export default function AdminStaffPage() {
                     <tr key={user.id} className={styles.row}>
                       <td>
                         <div className={styles.userCol}>
-                          <div className={styles.avatar}>{user.name[0]}</div>
+                          <div className={styles.avatar}>{(user.name || '?')[0]}</div>
                           <span className={styles.name}>{user.name}</span>
                         </div>
                       </td>
@@ -177,14 +197,26 @@ export default function AdminStaffPage() {
                         </span>
                       </td>
                       <td>
-                        <button
-                          className={styles.toggleBtn}
-                          onClick={() => handleToggleStatus(user)}
-                          disabled={user.role === 'super_admin' || userProfile?.role !== 'super_admin'}
-                          id={`toggle-status-${user.id}`}
-                        >
-                          {user.isActive ? <ToggleRight size={24} className={styles.toggleOn} /> : <ToggleLeft size={24} className={styles.toggleOff} />}
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <button
+                            className={styles.toggleBtn}
+                            onClick={() => handleToggleStatus(user)}
+                            disabled={user.role === 'super_admin' || userProfile?.role !== 'super_admin'}
+                            id={`toggle-status-${user.id}`}
+                          >
+                            {user.isActive ? <ToggleRight size={24} className={styles.toggleOn} /> : <ToggleLeft size={24} className={styles.toggleOff} />}
+                          </button>
+                          {userProfile?.role === 'super_admin' && user.role !== 'super_admin' && (
+                            <button
+                              className={styles.permBtn}
+                              onClick={() => setPermTarget(user)}
+                              title="Manage extra permissions"
+                              id={`perms-${user.id}`}
+                            >
+                              <Key size={14} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -193,7 +225,7 @@ export default function AdminStaffPage() {
             </div>
           </div>
 
-          {/* Right Block: Permissions Matrix Widget (NEW FEATURE) */}
+          {/* Permissions Matrix */}
           <div className={styles.matrixWidget}>
             <div className={styles.matrixHead}>
               <Shield size={18} className={styles.shieldIcon} />
@@ -205,18 +237,20 @@ export default function AdminStaffPage() {
               {PERMISSIONS_LIST.map(p => (
                 <div key={p.key} className={styles.matrixRow}>
                   <div className={styles.permInfo}>
-                    <p className={styles.permName}>{p.name}</p>
+                    <p className={styles.permName}>
+                      {p.name}
+                      {p.superAdminOnly && <span className={styles.grantBadge}>Super Admin Grant</span>}
+                    </p>
                     <p className={styles.permDesc}>{p.desc}</p>
                   </div>
-                  
                   <div className={styles.matrixRoles}>
                     {USER_ROLES.map(role => {
-                      const hasAccess = checkRolePermission(role.id, p.key);
+                      const hasAccess = role.id === 'super_admin' || role.permissions?.includes(p.key);
                       return (
-                        <div key={role.id} className={styles.matrixRoleCol} title={`${roleLabels[role.id]}: ${hasAccess ? 'Access Granted' : 'Access Denied'}`}>
+                        <div key={role.id} className={styles.matrixRoleCol} title={`${roleLabels[role.id]}: ${hasAccess ? 'Access Granted' : p.superAdminOnly ? 'Super Admin can grant individually' : 'Access Denied'}`}>
                           <span className={styles.roleInitial} style={{ color: roleColors[role.id] }}>{role.label[0]}</span>
-                          <span className={hasAccess ? styles.matrixAccessTrue : styles.matrixAccessFalse}>
-                            {hasAccess ? <Check size={14} /> : <X size={12} />}
+                          <span className={hasAccess ? styles.matrixAccessTrue : (p.superAdminOnly ? styles.matrixAccessOpt : styles.matrixAccessFalse)}>
+                            {hasAccess ? <Check size={14} /> : p.superAdminOnly ? <Key size={12} /> : <X size={12} />}
                           </span>
                         </div>
                       );
@@ -225,8 +259,11 @@ export default function AdminStaffPage() {
                 </div>
               ))}
             </div>
-          </div>
 
+            <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Key size={11} /> = Grantable individually by Super Admin
+            </p>
+          </div>
         </div>
       )}
 
@@ -253,10 +290,10 @@ export default function AdminStaffPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Role</label>
-                <select id="staff-role" className="form-input form-select" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                  <option value="staff">Staff (Orders & Inventory management)</option>
-                  <option value="admin">Admin (Meals, Orders & Inventory control)</option>
-                  {isSuperAdmin() && <option value="super_admin">Super Admin (All permissions)</option>}
+                <select id="staff-role" className="form-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={{ color: 'white', background: 'rgba(255,255,255,0.07)' }}>
+                  <option value="staff" style={{ background: '#1a1d26', color: 'white' }}>Staff (Orders & Inventory management)</option>
+                  <option value="admin" style={{ background: '#1a1d26', color: 'white' }}>Admin (Meals, Orders & Inventory control)</option>
+                  {isSuperAdmin() && <option value="super_admin" style={{ background: '#1a1d26', color: 'white' }}>Super Admin (All permissions)</option>}
                 </select>
               </div>
               <div className={styles.modalActions}>
@@ -266,6 +303,56 @@ export default function AdminStaffPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Permission Grant Modal */}
+      {permTarget && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <h2>Grant Permissions — {permTarget.name}</h2>
+              <button className={styles.modalClose} onClick={() => setPermTarget(null)}>×</button>
+            </div>
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                These special permissions are not assigned by default. Toggle to grant or revoke access for <strong style={{ color: 'white' }}>{permTarget.name}</strong>.
+              </p>
+              {SUPER_ADMIN_GRANTABLE.map(perm => {
+                const granted = checkRolePermission(permTarget, perm.key);
+                return (
+                  <div key={perm.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: `1px solid ${granted ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+                    <div>
+                      <p style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', marginBottom: '2px' }}>{perm.name}</p>
+                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{perm.desc}</p>
+                    </div>
+                    <button
+                      onClick={() => handleTogglePermission(permTarget.id, perm.key, permTarget.extraPermissions)}
+                      disabled={savingPerm}
+                      style={{
+                        flexShrink: 0, marginLeft: '1rem',
+                        padding: '0.375rem 0.875rem',
+                        borderRadius: '20px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        background: granted ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+                        color: granted ? '#ef4444' : '#22c55e',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {granted ? 'Revoke' : 'Grant'}
+                    </button>
+                  </div>
+                );
+              })}
+              <div className={styles.modalActions} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                <button className="btn btn-ghost" onClick={() => setPermTarget(null)}>Done</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
