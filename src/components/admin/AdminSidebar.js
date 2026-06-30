@@ -16,17 +16,17 @@ import {
 import styles from './AdminSidebar.module.css';
 
 const NAV = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'staff'] },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, roles: ['super_admin', 'admin', 'staff'] },
-  { href: '/admin/meals', label: 'Meals', icon: UtensilsCrossed, roles: ['super_admin', 'admin'] },
-  { href: '/admin/inventory', label: 'Inventory', icon: Package, roles: ['super_admin', 'admin', 'staff'] },
-  { href: '/admin/customers', label: 'Customers', icon: Users, roles: ['super_admin', 'admin'], perm: 'view_customers' },
-  { href: '/admin/messages', label: 'Messages', icon: MessageSquare, roles: ['super_admin'], perm: 'view_messages' },
-  { href: '/admin/staff', label: 'Staff & Roles', icon: UserCog, roles: ['super_admin', 'admin'] },
+  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, perm: 'manage_orders' },
+  { href: '/admin/meals', label: 'Meals', icon: UtensilsCrossed, perm: 'manage_meals' },
+  { href: '/admin/inventory', label: 'Inventory', icon: Package, perm: 'view_inventory' },
+  { href: '/admin/customers', label: 'Customers', icon: Users, perm: 'view_customers' },
+  { href: '/admin/messages', label: 'Messages', icon: MessageSquare, perm: 'view_messages' },
+  { href: '/admin/staff', label: 'Staff & Roles', icon: UserCog, perm: 'all_permissions' },
 ];
 
 export default function AdminSidebar() {
-  const { userProfile, signOut, refreshUserProfile } = useAuth();
+  const { userProfile, signOut, refreshUserProfile, hasPermission } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -45,14 +45,13 @@ export default function AdminSidebar() {
   }, [userProfile, showEditModal]);
 
   const role = userProfile?.role || 'staff';
-  const extraPerms = userProfile?.extraPermissions || [];
   const allowed = NAV.filter(n => {
-    if (!n.roles.includes(role)) {
-      // Check if granted via extraPermissions
-      if (n.perm && extraPerms.includes(n.perm)) return true;
-      return false;
+    if (n.perm) {
+      return hasPermission(n.perm);
     }
-    return true;
+    // Dashboard: show if user has at least one valid admin panel permission
+    const possiblePerms = ['manage_meals', 'manage_orders', 'view_inventory', 'view_customers', 'view_messages'];
+    return possiblePerms.some(p => hasPermission(p)) || hasPermission('all_permissions');
   });
 
   const handleSaveProfile = async (e) => {

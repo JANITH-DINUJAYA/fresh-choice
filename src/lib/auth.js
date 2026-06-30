@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { USER_ROLES } from './constants';
 
 const AuthContext = createContext(null);
 
@@ -96,6 +97,34 @@ export function AuthProvider({ children }) {
   const isSuperAdmin = () => userProfile?.role === 'super_admin';
   const isStaff = () => userProfile?.role === 'staff';
 
+  const hasPermission = (permKey) => {
+    if (!userProfile) return false;
+
+    // Check if the user has Root/Super-Admin permission (all_permissions)
+    const isSuperAdminRole = userProfile.role === 'super_admin';
+    const isAllGranted = isSuperAdminRole || (userProfile.extraPermissions || []).includes('all_permissions');
+    const isAllRevoked = (userProfile.revokedPermissions || []).includes('all_permissions');
+
+    const hasRootAccess = isAllGranted && !isAllRevoked;
+
+    // If checking for all_permissions, return root access check
+    if (permKey === 'all_permissions') {
+      return hasRootAccess;
+    }
+
+    // For any other permission:
+    // It's allowed if they have root access (unless that specific permission is explicitly revoked)
+    // OR if their role has it by default (and it's not revoked)
+    // OR if it's explicitly granted as extra
+    const roleDef = USER_ROLES.find(r => r.id === userProfile.role);
+    const roleHas = roleDef?.permissions?.includes(permKey) || false;
+    const isRevoked = (userProfile.revokedPermissions || []).includes(permKey);
+    const extraHas = (userProfile.extraPermissions || []).includes(permKey);
+
+    if (isRevoked) return false;
+    return hasRootAccess || roleHas || extraHas;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -109,6 +138,7 @@ export function AuthProvider({ children }) {
         isAdmin,
         isSuperAdmin,
         isStaff,
+        hasPermission,
         refreshUserProfile,
       }}
     >

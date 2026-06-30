@@ -11,7 +11,7 @@ const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 const WARN_BEFORE_MS = 60 * 1000;        // warn 1 minute before logout
 
 export default function AdminLayout({ children }) {
-  const { user, userProfile, loading, signOut } = useAuth();
+  const { user, userProfile, loading, signOut, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -60,7 +60,7 @@ export default function AdminLayout({ children }) {
     };
   }, [pathname, user, resetIdleTimer]);
 
-  // Auth guard
+  // Auth and general role guard
   useEffect(() => {
     if (loading) return;
     if (pathname === '/admin/login') return;
@@ -68,6 +68,41 @@ export default function AdminLayout({ children }) {
       router.replace('/admin/login');
     }
   }, [user, userProfile, loading, pathname, router]);
+
+  // Route-level permission guard
+  useEffect(() => {
+    if (loading || !user || !userProfile) return;
+    if (pathname === '/admin/login') return;
+
+    // Define route permission requirements
+    const routePerms = {
+      '/admin/orders': 'manage_orders',
+      '/admin/meals': 'manage_meals',
+      '/admin/inventory': 'view_inventory',
+      '/admin/customers': 'view_customers',
+      '/admin/messages': 'view_messages',
+      '/admin/staff': 'all_permissions',
+    };
+
+    // If the path starts with one of the restricted prefixes
+    const matchedPrefix = Object.keys(routePerms).find(prefix => pathname.startsWith(prefix));
+    if (matchedPrefix) {
+      const requiredPerm = routePerms[matchedPrefix];
+      if (!hasPermission(requiredPerm)) {
+        toast.error('Access Denied: You do not have permission to view this page.');
+        router.replace('/admin/dashboard');
+      }
+    } else if (pathname === '/admin/dashboard') {
+      // Dashboard: check if they have at least one permission
+      const possiblePerms = ['manage_meals', 'manage_orders', 'view_inventory', 'view_customers', 'view_messages'];
+      const hasAny = possiblePerms.some(p => hasPermission(p)) || hasPermission('all_permissions');
+      if (!hasAny) {
+        toast.error('Access Denied: All your permissions have been revoked.');
+        signOut();
+        router.replace('/admin/login?reason=revoked');
+      }
+    }
+  }, [pathname, user, userProfile, loading, hasPermission, router, signOut]);
 
   if (pathname === '/admin/login') return <>{children}</>;
 
