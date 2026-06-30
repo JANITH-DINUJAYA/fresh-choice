@@ -32,7 +32,10 @@ export const metadata = {
     googleBot: { index: true, follow: true },
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    apple: '/logo.png',
   },
 };
 
@@ -47,6 +50,8 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <meta name="theme-color" content="#0d1f0d" />
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* CSP and security meta tags */}

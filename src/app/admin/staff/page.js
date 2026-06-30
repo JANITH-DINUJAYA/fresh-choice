@@ -309,48 +309,70 @@ export default function AdminStaffPage() {
 
       {/* Permission Grant Modal */}
       {permTarget && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
+        <div className={styles.modalOverlay} onClick={() => setPermTarget(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHead}>
               <h2>Grant Permissions — {permTarget.name}</h2>
-              <button className={styles.modalClose} onClick={() => setPermTarget(null)}>×</button>
+              <button className={styles.modalClose} onClick={() => setPermTarget(null)} aria-label="Close modal">×</button>
             </div>
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-                These special permissions are not assigned by default. Toggle to grant or revoke access for <strong style={{ color: 'white' }}>{permTarget.name}</strong>.
+                Special permissions can be customized for each team member. Default role permissions are locked.
               </p>
               {SUPER_ADMIN_GRANTABLE.map(perm => {
-                const granted = checkRolePermission(permTarget, perm.key);
+                const isDefault = permTarget.role === 'super_admin' || 
+                  (USER_ROLES.find(r => r.id === permTarget.role)?.permissions?.includes(perm.key) || false);
+                const granted = isDefault || (permTarget.extraPermissions || []).includes(perm.key);
+
                 return (
-                  <div key={perm.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: `1px solid ${granted ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+                  <div key={perm.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: `1px solid ${isDefault ? 'rgba(255,255,255,0.05)' : granted ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
                     <div>
-                      <p style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', marginBottom: '2px' }}>{perm.name}</p>
+                      <p style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {perm.name}
+                        {isDefault && <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)', borderRadius: '4px', fontWeight: 600 }}>Default</span>}
+                      </p>
                       <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{perm.desc}</p>
                     </div>
-                    <button
-                      onClick={() => handleTogglePermission(permTarget.id, perm.key, permTarget.extraPermissions)}
-                      disabled={savingPerm}
-                      style={{
-                        flexShrink: 0, marginLeft: '1rem',
-                        padding: '0.375rem 0.875rem',
-                        borderRadius: '20px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        background: granted ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
-                        color: granted ? '#ef4444' : '#22c55e',
-                        fontFamily: 'var(--font-sans)',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {granted ? 'Revoke' : 'Grant'}
-                    </button>
+                    {isDefault ? (
+                      <span
+                        style={{
+                          flexShrink: 0, marginLeft: '1rem',
+                          padding: '0.375rem 0.875rem',
+                          borderRadius: '20px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          background: 'rgba(255,255,255,0.05)',
+                          color: 'rgba(255,255,255,0.4)',
+                        }}
+                      >
+                        Role Default
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleTogglePermission(permTarget.id, perm.key, permTarget.extraPermissions)}
+                        disabled={savingPerm}
+                        style={{
+                          flexShrink: 0, marginLeft: '1rem',
+                          padding: '0.375rem 0.875rem',
+                          borderRadius: '20px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          background: granted ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+                          color: granted ? '#ef4444' : '#22c55e',
+                          fontFamily: 'var(--font-sans)',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {granted ? 'Revoke' : 'Grant'}
+                      </button>
+                    )}
                   </div>
                 );
               })}
               <div className={styles.modalActions} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                <button className="btn btn-ghost" onClick={() => setPermTarget(null)}>Done</button>
+                <button className="btn btn-ghost" onClick={() => setPermTarget(null)}>Close Window</button>
               </div>
             </div>
           </div>
