@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Heart, Users, Leaf, Award } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -20,7 +21,14 @@ export default function AboutPage() {
         <div className="container">
           <div className={styles.storyGrid}>
             <div className={styles.storyImg}>
-              <div className={styles.storyImgPlaceholder}><span>👩‍🍳</span><p>Our Kitchen</p></div>
+              <div style={{ position: 'relative', width: '100%', height: '450px', borderRadius: 'var(--radius-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
+                <Image
+                  src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80"
+                  alt="Fresh Choice Cooking Kitchen"
+                  fill
+                  style={{ objectFit: 'cover' }}
+                />
+              </div>
             </div>
             <div className={styles.storyContent}>
               <h2 className="heading-lg">How It All Began</h2>
