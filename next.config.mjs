@@ -9,6 +9,8 @@ const nextConfig = {
     ],
   },
 
+  serverExternalPackages: ['firebase-admin'],
+
   async headers() {
     return [
       {
