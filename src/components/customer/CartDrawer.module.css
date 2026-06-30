@@ -1,0 +1,133 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: calc(var(--z-drawer) - 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-base);
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  background: var(--fc-white);
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--transition-slow);
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.12);
+}
+.drawer.open { transform: translateX(0); }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.headerIcon { color: var(--fc-green-500); }
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--fc-green-800);
+}
+.count {
+  background: var(--fc-green-500);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.closeBtn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-muted);
+  background: rgba(0,0,0,0.05);
+  transition: all var(--transition-fast);
+}
+.closeBtn:hover { background: rgba(0,0,0,0.1); color: var(--color-text); }
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+}
+
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 100%;
+  gap: 0.75rem; text-align: center;
+  padding: 3rem 1rem;
+}
+.emptyIcon { font-size: 3.5rem; }
+.emptyTitle { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; color: var(--fc-green-800); }
+.emptyText { color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+.itemList { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+
+.item {
+  display: flex; gap: 0.875rem; align-items: flex-start;
+  padding: 1rem; background: var(--fc-cream-50);
+  border-radius: var(--radius-md); position: relative;
+}
+.itemImg {
+  width: 64px; height: 64px; border-radius: var(--radius-sm);
+  overflow: hidden; flex-shrink: 0; position: relative;
+  background: var(--fc-green-100);
+}
+.imgPlaceholder {
+  width: 100%; height: 100%; display: flex;
+  align-items: center; justify-content: center; font-size: 1.75rem;
+}
+.itemInfo { flex: 1; min-width: 0; }
+.itemName { font-weight: 600; font-size: 0.9rem; color: var(--fc-green-800); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.itemPrice { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.5rem; }
+.qtyRow { display: flex; align-items: center; gap: 0.5rem; }
+.qtyBtn {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--fc-white); border: 1.5px solid #d0dbd0;
+  color: var(--fc-green-700); transition: all var(--transition-fast);
+}
+.qtyBtn:hover { background: var(--fc-green-500); border-color: var(--fc-green-500); color: white; }
+.qty { font-size: 0.875rem; font-weight: 600; min-width: 20px; text-align: center; }
+.itemRight { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+.itemTotal { font-weight: 700; font-size: 0.9rem; color: var(--fc-green-700); }
+.removeBtn {
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: #e53e3e; background: rgba(229,62,62,0.08);
+  transition: all var(--transition-fast);
+}
+.removeBtn:hover { background: rgba(229,62,62,0.18); }
+
+.footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid rgba(0,0,0,0.07);
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.subtotal {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.subtotal span { font-size: 0.9rem; color: var(--color-text-muted); }
+.subtotalAmount { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; color: var(--fc-green-800); }
+.deliveryNote { font-size: 0.75rem; color: var(--color-text-muted); text-align: center; }
+.continueBtn { font-size: 0.875rem; justify-content: center; }

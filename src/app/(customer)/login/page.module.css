@@ -1,0 +1,37 @@
+.page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--fc-green-900) 0%, var(--fc-green-700) 100%);
+  padding: 2rem 1rem;
+}
+.card {
+  background: white; border-radius: var(--radius-xl); padding: 3rem 2.5rem;
+  width: 100%; max-width: 440px; box-shadow: var(--shadow-xl);
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.logoRow { display: flex; align-items: center; gap: 0.625rem; justify-content: center; margin-bottom: 0.5rem; }
+.logoIcon {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--fc-green-500), var(--fc-green-700));
+  display: flex; align-items: center; justify-content: center; color: white;
+}
+.logoText { font-family: var(--font-serif); font-size: 1.375rem; font-weight: 700; color: var(--fc-green-800); }
+.title { font-family: var(--font-serif); font-size: 1.875rem; font-weight: 700; color: var(--fc-green-900); text-align: center; }
+.sub { color: var(--color-text-muted); text-align: center; font-size: 0.9rem; margin-top: -0.25rem; }
+.form { display: flex; flex-direction: column; gap: 1.125rem; margin-top: 0.5rem; }
+.pwWrap { position: relative; }
+.pwInput { padding-right: 3rem !important; }
+.eyeBtn {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--color-text-muted); background: none; border: none; cursor: pointer;
+  display: flex; align-items: center;
+}
+.submitBtn { width: 100%; justify-content: center; margin-top: 0.25rem; }
+.divider {
+  display: flex; align-items: center; gap: 1rem; color: var(--color-text-muted);
+  font-size: 0.8125rem; margin: 0.5rem 0;
+}
+.divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid rgba(0,0,0,0.1); }
+.signupBtn { width: 100%; justify-content: center; }
+.adminNote { text-align: center; font-size: 0.8125rem; color: var(--color-text-muted); margin-top: 0.5rem; }
+.adminLink { color: var(--fc-green-600); font-weight: 500; text-decoration: none; }
+.adminLink:hover { text-decoration: underline; }

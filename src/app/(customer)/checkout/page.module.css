@@ -1,0 +1,404 @@
+.page {
+  padding: 7rem 0 5rem;
+}
+.title {
+  margin-bottom: 2rem;
+  color: var(--fc-green-900);
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2.5rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.section {
+  background: var(--fc-white);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(13, 31, 13, 0.05);
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+}
+.sectionHead svg {
+  color: var(--fc-green-500);
+}
+.sectionHead h2 {
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: var(--fc-green-900);
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 480px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.freeHint {
+  font-size: 0.8125rem;
+  color: var(--fc-green-500);
+  margin-top: 0.375rem;
+  font-weight: 600;
+}
+
+.scheduleToggle {
+  display: flex;
+  gap: 0.75rem;
+}
+.scheduleBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--fc-green-200);
+  background: var(--fc-cream-50);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+  color: var(--fc-green-800);
+}
+.scheduleBtn.active {
+  background: var(--fc-green-500);
+  color: white;
+  border-color: var(--fc-green-500);
+  box-shadow: var(--shadow-sm);
+}
+
+.paymentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (max-width: 480px) {
+  .paymentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.payBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--fc-green-100);
+  background: var(--fc-cream-50);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+  color: var(--fc-green-800);
+  font-weight: 600;
+}
+.payBtn:hover:not(.payDisabled) {
+  border-color: var(--fc-green-400);
+}
+.payBtn.payActive {
+  border-color: var(--fc-green-500);
+  background: rgba(58,122,58,0.06);
+}
+.payBtn.payDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Uploader Styles */
+.bankUploadSection {
+  margin-top: 1.25rem;
+  background: var(--fc-cream-50);
+  border: 1.5px dashed var(--fc-green-200);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+.bankNoteAlert {
+  font-size: 0.8125rem;
+  color: var(--fc-green-800);
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+.fileInputLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--fc-green-500);
+  color: white;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: var(--shadow-sm);
+  width: max-content;
+}
+.fileInputLabel:hover {
+  background: var(--fc-green-600);
+}
+.hiddenInput {
+  display: none;
+}
+.checkoutSlipStatus, .slipUploaded {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--fc-green-600);
+  font-weight: 600;
+}
+
+/* Summary Box */
+.summary {
+  background: var(--fc-white);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 100px;
+  border: 1px solid rgba(13, 31, 13, 0.05);
+}
+.summaryTitle {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--fc-green-900);
+  margin-bottom: 1.25rem;
+}
+.summaryItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.itemName {
+  font-size: 0.875rem;
+  color: var(--fc-green-800);
+  font-weight: 500;
+}
+.itemAmt {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--fc-green-900);
+  white-space: nowrap;
+}
+.summaryDivider {
+  border: none;
+  border-top: 1px solid rgba(13, 31, 13, 0.06);
+  margin: 0.75rem 0;
+}
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+.totalRow {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--fc-green-900);
+}
+.placeBtn {
+  width: 100%;
+  margin-top: 1.25rem;
+  justify-content: center;
+}
+.secureNote {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.75rem;
+  font-weight: 500;
+}
+
+/* Auth Gate Locked Screen */
+.authGate {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+.authGateCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 3rem 2rem;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid rgba(13, 31, 13, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+.authGateIcon {
+  color: #ef4444;
+}
+.authGateCard h2 {
+  font-family: var(--font-serif);
+  color: var(--fc-green-900);
+}
+.authGateCard p {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.authGateActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+.authGateActions a {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Bank Modal Success Screen */
+.bankModal {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background: var(--fc-cream-50);
+}
+.bankCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 3rem 2.25rem;
+  max-width: 500px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid rgba(13, 31, 13, 0.05);
+}
+.bankCheck {
+  color: var(--fc-green-500);
+}
+.bankCard h2 {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  color: var(--fc-green-900);
+}
+.bankCard p {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.bankDetails {
+  width: 100%;
+  background: var(--fc-cream-50);
+  border: 1px solid var(--fc-green-100);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+.bankRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  font-size: 0.875rem;
+}
+.bankRow span {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.bankRow strong {
+  color: var(--fc-green-900);
+}
+.bankRow:last-child {
+  border-bottom: none;
+}
+.acctRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.copyBtn {
+  font-size: 0.7rem;
+  color: var(--fc-green-500);
+  background: none;
+  border: 1px solid var(--fc-green-300);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.copyBtn:hover {
+  background: var(--fc-green-100);
+}
+.totalAmt {
+  color: var(--fc-green-600) !important;
+  font-size: 1.05rem;
+}
+.slipUploadBox {
+  width: 100%;
+  background: var(--fc-cream-50);
+  border: 2px dashed var(--fc-green-200);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.slipUploadBox h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--fc-green-900);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.emptyPage {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  text-align: center;
+}
+.emptyPage h2 {
+  font-family: var(--font-serif);
+  color: var(--fc-green-900);
+}

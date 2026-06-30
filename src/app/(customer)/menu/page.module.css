@@ -1,0 +1,36 @@
+.page { padding-bottom: 5rem; }
+.pageHeader {
+  background: linear-gradient(135deg, var(--fc-green-900) 0%, var(--fc-green-700) 100%);
+  padding: 8rem 0 4rem; text-align: center; margin-bottom: 3rem;
+}
+.eyebrow { color: var(--fc-green-300); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.75rem; }
+.headerSub { color: rgba(255,255,255,0.7); margin-top: 0.75rem; font-size: 1.0625rem; }
+
+.toolbar {
+  display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+}
+.searchWrap { position: relative; flex: 1; min-width: 240px; }
+.searchIcon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); }
+.searchInput { padding-left: 2.5rem !important; }
+.sortWrap { display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-muted); }
+.sortSelect { width: auto; min-width: 200px; }
+
+.tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+.tab {
+  padding: 0.5rem 1.125rem; border-radius: var(--radius-full);
+  font-size: 0.875rem; font-weight: 500;
+  background: var(--fc-white); color: var(--fc-green-700);
+  border: 1.5px solid var(--fc-green-100); cursor: pointer;
+  transition: all var(--transition-fast); font-family: var(--font-sans);
+}
+.tab:hover, .tab.active { background: var(--fc-green-500); color: white; border-color: var(--fc-green-500); }
+
+.results { margin-bottom: 1.5rem; }
+.count { font-size: 0.875rem; color: var(--color-text-muted); }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; }
+@media (max-width: 1024px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 580px) { .grid { grid-template-columns: 1fr; } }
+
+.empty { text-align: center; padding: 4rem 1rem; color: var(--color-text-muted); }
+.empty span { font-size: 3rem; display: block; margin-bottom: 1rem; }
