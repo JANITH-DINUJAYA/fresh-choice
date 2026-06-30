@@ -3,27 +3,44 @@ import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const hasAdminKeys = process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
+function getServiceAccount() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-const serviceAccount = hasAdminKeys ? {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-} : null;
+  if (!projectId || !clientEmail || !privateKey) return null;
 
-if (!getApps().length && serviceAccount) {
-  try {
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
-  } catch (err) {
-    console.error('Firebase Admin init error:', err);
+  // Clean private key of surrounding double quotes
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    privateKey = privateKey.slice(1, -1);
   }
+  // Clean single quotes
+  if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
+    privateKey = privateKey.slice(1, -1);
+  }
+
+  // Replace escaped newlines with literal newlines
+  privateKey = privateKey.replace(/\\n/g, '\n');
+
+  return { projectId, clientEmail, privateKey };
 }
 
 export async function POST(req) {
+  const serviceAccount = getServiceAccount();
   if (!serviceAccount) {
-    return NextResponse.json({ error: 'Firebase Admin credentials not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'Firebase Admin credentials are not configured on the server' }, { status: 500 });
+  }
+
+  // Safely initialize Firebase Admin inside the request handler
+  if (!getApps().length) {
+    try {
+      initializeApp({
+        credential: cert(serviceAccount),
+      });
+    } catch (err) {
+      console.error('Firebase Admin init inside route error:', err);
+      return NextResponse.json({ error: 'Failed to initialize Firebase Admin SDK: ' + err.message }, { status: 500 });
+    }
   }
 
   try {

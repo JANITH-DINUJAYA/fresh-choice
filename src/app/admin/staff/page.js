@@ -140,7 +140,7 @@ export default function AdminStaffPage() {
     return roleHas || extraHas;
   };
 
-  const SUPER_ADMIN_GRANTABLE = PERMISSIONS_LIST.filter(p => p.superAdminOnly);
+  const SUPER_ADMIN_GRANTABLE = PERMISSIONS_LIST.filter(p => p.key !== 'all_permissions');
 
   return (
     <div className={styles.container}>
