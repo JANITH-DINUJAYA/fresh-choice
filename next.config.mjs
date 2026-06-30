@@ -9,7 +9,7 @@ const nextConfig = {
     ],
   },
 
-  serverExternalPackages: ['firebase-admin'],
+  serverExternalPackages: ['firebase-admin', 'jwks-rsa', 'jose'],
 
   async headers() {
     return [
