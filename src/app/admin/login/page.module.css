@@ -13,3 +13,5 @@
 .submitBtn { width: 100%; justify-content: center; }
 .backLink { font-size: 0.8125rem; color: rgba(255,255,255,0.35); text-decoration: none; margin-top: 0.5rem; transition: color var(--transition-fast); }
 .backLink:hover { color: rgba(255,255,255,0.65); }
+.idleNotice { width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 0.875rem; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius-md); color: #fcd34d; font-size: 0.8125rem; line-height: 1.5; }
+

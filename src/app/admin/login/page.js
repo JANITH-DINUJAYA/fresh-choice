@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Shield } from 'lucide-react';
+import { Eye, EyeOff, Shield, Clock } from 'lucide-react';
 import styles from './page.module.css';
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const { signInAdmin } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const idleLogout = searchParams.get('reason') === 'idle';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -34,16 +36,23 @@ export default function AdminLoginPage() {
         <h1 className={styles.title}>Admin Portal</h1>
         <p className={styles.sub}>Fresh Choice Management System</p>
 
+        {idleLogout && (
+          <div className={styles.idleNotice}>
+            <Clock size={14} />
+            Session expired due to 15 minutes of inactivity. Please sign in again.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className="form-group">
             <label className="form-label" style={{ color: 'rgba(255,255,255,0.7)' }}>Admin Email</label>
-            <input id="admin-login-email" type="email" className={styles.input} value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@freshchoice.lk" required />
+            <input id="admin-login-email" type="email" className={styles.input} value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@freshchoice.lk" autoComplete="email" required />
           </div>
           <div className="form-group">
             <label className="form-label" style={{ color: 'rgba(255,255,255,0.7)' }}>Password</label>
             <div className={styles.pwWrap}>
-              <input id="admin-login-password" type={showPw ? 'text' : 'password'} className={`${styles.input} ${styles.pwInput}`} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-              <button type="button" className={styles.eyeBtn} onClick={() => setShowPw(!showPw)}>
+              <input id="admin-login-password" type={showPw ? 'text' : 'password'} className={`${styles.input} ${styles.pwInput}`} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" required />
+              <button type="button" className={styles.eyeBtn} onClick={() => setShowPw(!showPw)} aria-label="Toggle password">
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -56,5 +65,17 @@ export default function AdminLoginPage() {
         <a href="/" className={styles.backLink}>← Back to Customer Site</a>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="loading-page">
+        <div className="spinner" />
+      </div>
+    }>
+      <AdminLoginForm />
+    </Suspense>
   );
 }

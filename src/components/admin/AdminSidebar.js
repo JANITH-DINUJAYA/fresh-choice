@@ -98,7 +98,11 @@ export default function AdminSidebar() {
       setShowEditModal(false);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Failed to update profile details', { id: toastId });
+      if (err.code === 'auth/requires-recent-login' || err.message?.includes('requires-recent-login')) {
+        toast.error('For security reasons, changing your password requires a recent login. Please sign out, sign in again, and try updating your password.', { id: toastId, duration: 6000 });
+      } else {
+        toast.error(err.message || 'Failed to update profile details', { id: toastId });
+      }
     } finally {
       setSaving(false);
     }

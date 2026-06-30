@@ -1,40 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // User helper function
+
+    // Helper: only call getUserRole when the user doc might exist
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    function isAdmin() {
-      return request.auth != null && 
-        (getUserRole() == 'super_admin' || getUserRole() == 'admin' || getUserRole() == 'staff');
+    // Safe role check - avoids crashes when user doc doesn't exist yet
+    function hasAdminRole() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserRole() in ['super_admin', 'admin', 'staff'];
+    }
+
+    function isSuperAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserRole() == 'super_admin';
     }
 
     // Users Collection
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if request.auth != null && (request.auth.uid == userId || getUserRole() == 'super_admin');
+      // Read: own profile or admin
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || hasAdminRole());
+
+      // Create: authenticated user creating THEIR OWN document (new signup)
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Update: own profile OR super admin modifying any user
+      allow update: if request.auth != null &&
+        (request.auth.uid == userId || isSuperAdmin());
+
+      // Delete: only super admin
+      allow delete: if isSuperAdmin();
     }
 
     // Meals Collection
     match /meals/{mealId} {
-      allow read: if true; // Public menu browsing
-      allow write: if isAdmin();
+      allow read: if true;           // Public menu browsing
+      allow write: if hasAdminRole();
     }
 
     // Orders Collection
     match /orders/{orderId} {
-      allow read: if request.auth != null && (resource.data.customerId == request.auth.uid || isAdmin());
-      allow create: if true; // Anyone can place order
-      allow update, delete: if isAdmin();
+      allow read: if request.auth != null &&
+        (resource.data.customerId == request.auth.uid || hasAdminRole());
+      allow create: if true;         // Anyone can place an order (guest too)
+      allow update, delete: if hasAdminRole();
     }
 
     // Contact Messages
     match /contactMessages/{messageId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow create: if true;         // Public contact form
+      allow read, update, delete: if hasAdminRole();
+    }
+
+    // Categories Collection
+    match /categories/{categoryId} {
+      allow read: if true;           // Public category browsing
+      allow write: if hasAdminRole();
     }
   }
 }
