@@ -1,31 +1,50 @@
 import { Salad, Utensils, ChefHat, CupSoda, Cookie, Clock, CheckCircle, Package, Truck, XCircle, Coins, Landmark, CreditCard } from 'lucide-react';
 
+// Map of lowercase lucide icon names → components
+const ICON_MAP = {
+  salad: Salad,
+  utensils: Utensils,
+  chefhat: ChefHat,
+  cupsoda: CupSoda,
+  cookie: Cookie,
+  clock: Clock,
+  checkcircle: CheckCircle,
+  package: Package,
+  truck: Truck,
+  xcircle: XCircle,
+  coins: Coins,
+  landmark: Landmark,
+  creditcard: CreditCard,
+};
+
+// Detect if a string contains emoji (non-ASCII Unicode)
+function isEmoji(str) {
+  return /[^\u0000-\u007F]/.test(str);
+}
+
 export default function CategoryIcon({ name, size = 18, className = '' }) {
   if (!name) return <ChefHat size={size} className={className} />;
 
-  // Support direct emoji or text rendering
   const key = name.trim().toLowerCase();
-  switch (key) {
-    case 'salad': return <Salad size={size} className={className} />;
-    case 'utensils': return <Utensils size={size} className={className} />;
-    case 'chefhat': return <ChefHat size={size} className={className} />;
-    case 'cupsoda': return <CupSoda size={size} className={className} />;
-    case 'cookie': return <Cookie size={size} className={className} />;
-    
-    // Status
-    case 'clock': return <Clock size={size} className={className} />;
-    case 'checkcircle': return <CheckCircle size={size} className={className} />;
-    case 'package': return <Package size={size} className={className} />;
-    case 'truck': return <Truck size={size} className={className} />;
-    case 'xcircle': return <XCircle size={size} className={className} />;
 
-    // Payments
-    case 'coins': return <Coins size={size} className={className} />;
-    case 'landmark': return <Landmark size={size} className={className} />;
-    case 'creditcard': return <CreditCard size={size} className={className} />;
-
-    default:
-      // If it doesn't match any Lucide name, render it directly as an emoji/character
-      return <span style={{ fontSize: `${size}px`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }} className={className}>{name}</span>;
+  // Check if it matches a known Lucide icon name
+  const IconComponent = ICON_MAP[key];
+  if (IconComponent) {
+    return <IconComponent size={size} className={className} />;
   }
+
+  // If it contains emoji / non-ASCII characters, render it directly
+  if (isEmoji(name)) {
+    return (
+      <span
+        style={{ fontSize: `${size}px`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+        className={className}
+      >
+        {name}
+      </span>
+    );
+  }
+
+  // Fallback: unknown string that is NOT an emoji → show default icon
+  return <ChefHat size={size} className={className} />;
 }
