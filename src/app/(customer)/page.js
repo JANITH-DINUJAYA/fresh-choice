@@ -28,13 +28,33 @@ const TESTIMONIALS = [
 
 export default function HomePage() {
   const [meals, setMeals] = useState(SAMPLE_MEALS);
+  const [allCategories, setAllCategories] = useState(CATEGORIES);
   const [activeCategory, setActiveCategory] = useState('all');
   const [heroVisible, setHeroVisible] = useState(false);
 
   useEffect(() => {
     setHeroVisible(true);
     fetchFeaturedMeals();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const catSnap = await getDocs(collection(db, 'categories'));
+      if (!catSnap.empty) {
+        const customCats = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const merged = [...CATEGORIES];
+        for (const c of customCats) {
+          if (!merged.find(m => m.id === c.id)) {
+            merged.push(c);
+          }
+        }
+        setAllCategories(merged);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchFeaturedMeals = async () => {
     try {
@@ -138,7 +158,7 @@ export default function HomePage() {
             <h2 className="heading-xl">What We Offer</h2>
           </div>
           <div className={styles.categoryGrid}>
-            {CATEGORIES.map(cat => (
+            {allCategories.map(cat => (
               <Link
                 key={cat.id}
                 href={`/menu?cat=${cat.slug}`}
@@ -174,7 +194,7 @@ export default function HomePage() {
             >
               All
             </button>
-            {CATEGORIES.map(cat => (
+            {allCategories.map(cat => (
               <button
                 key={cat.id}
                 className={`${styles.filterBtn} ${activeCategory === cat.id ? styles.active : ''}`}

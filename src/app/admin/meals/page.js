@@ -34,7 +34,7 @@ export default function AdminMealsPage() {
 
   // Category modal states
   const [showCatModal, setShowCatModal] = useState(false);
-  const [catForm, setCatForm] = useState({ label: '', id: '' });
+  const [catForm, setCatForm] = useState({ label: '', id: '', icon: '🍽️' });
   const [editCatId, setEditCatId] = useState(null);
   const [savingCat, setSavingCat] = useState(false);
 
@@ -185,15 +185,31 @@ export default function AdminMealsPage() {
   };
 
   // --- Category management ---
+  const getAutoEmoji = (name) => {
+    const lowercase = name.toLowerCase();
+    if (lowercase.includes('salad')) return '🥗';
+    if (lowercase.includes('curry') || lowercase.includes('rice')) return '🍛';
+    if (lowercase.includes('bowl')) return '🍲';
+    if (lowercase.includes('drink') || lowercase.includes('juice') || lowercase.includes('shake') || lowercase.includes('lassi')) return '🥤';
+    if (lowercase.includes('snack') || lowercase.includes('dessert') || lowercase.includes('sweet') || lowercase.includes('cookie')) return '🍪';
+    if (lowercase.includes('wrap') || lowercase.includes('roti') || lowercase.includes('sandwich')) return '🌯';
+    if (lowercase.includes('soup')) return '🥣';
+    if (lowercase.includes('burger')) return '🍔';
+    if (lowercase.includes('pizza')) return '🍕';
+    if (lowercase.includes('chicken') || lowercase.includes('meat')) return '🍗';
+    if (lowercase.includes('fish') || lowercase.includes('seafood')) return '🐟';
+    return '🍽️';
+  };
+
   const handleOpenAddCat = () => {
     setEditCatId(null);
-    setCatForm({ label: '', id: '' });
+    setCatForm({ label: '', id: '', icon: '' });
     setShowCatModal(true);
   };
 
   const handleOpenEditCat = (cat) => {
     setEditCatId(cat.id);
-    setCatForm({ label: cat.label, id: cat.id });
+    setCatForm({ label: cat.label, id: cat.id, icon: cat.icon || '' });
     setShowCatModal(true);
   };
 
@@ -216,7 +232,8 @@ export default function AdminMealsPage() {
     if (!catForm.label) { toast.error('Category name required'); return; }
     setSavingCat(true);
     const slugId = editCatId || catForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const catData = { label: catForm.label, id: slugId, icon: '', slug: slugId };
+    const chosenIcon = catForm.icon.trim() || getAutoEmoji(catForm.label);
+    const catData = { label: catForm.label, id: slugId, icon: chosenIcon, slug: slugId };
     try {
       await setDoc(doc(db, 'categories', slugId), catData);
       if (editCatId) {
@@ -462,15 +479,18 @@ export default function AdminMealsPage() {
               {/* Existing categories list */}
               <div>
                 <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>All Categories</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
                   {allCategories.map(cat => {
                     const isBuiltIn = !!CATEGORIES.find(c => c.id === cat.id);
                     return (
                       <div key={cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div>
-                          <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>{cat.label}</span>
-                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem' }}>{cat.id}</span>
-                          {isBuiltIn && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: '4px' }}>built-in</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '1.1rem', width: '24px', textAlign: 'center' }}>{cat.icon || '🍽️'}</span>
+                          <div>
+                            <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>{cat.label}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem' }}>({cat.id})</span>
+                          </div>
+                          {isBuiltIn && <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: '4px' }}>built-in</span>}
                         </div>
                         {!isBuiltIn && (
                           <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => handleDeleteCat(cat.id)} title="Delete category"><Trash2 size={13} /></button>
@@ -486,16 +506,27 @@ export default function AdminMealsPage() {
                 <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Add New Category</p>
                 <form onSubmit={handleSaveCat} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
                   <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Category Name *</label>
                     <input
                       className={`form-input ${styles.lightSelectInput}`}
                       value={catForm.label}
-                      onChange={e => setCatForm({ label: e.target.value, id: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-') })}
+                      onChange={e => setCatForm({ ...catForm, label: e.target.value })}
                       placeholder="e.g. Wraps & Sandwiches"
                       required
                     />
                   </div>
-                  <button type="submit" className="btn btn-primary" disabled={savingCat} style={{ flexShrink: 0 }}>
-                    {savingCat ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />} Add
+                  <div className="form-group" style={{ width: '90px', flexShrink: 0, margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Icon / Emoji</label>
+                    <input
+                      className={`form-input ${styles.lightSelectInput}`}
+                      style={{ textAlign: 'center' }}
+                      value={catForm.icon}
+                      onChange={e => setCatForm({ ...catForm, icon: e.target.value })}
+                      placeholder="e.g. 🌯"
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={savingCat} style={{ flexShrink: 0, height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {savingCat ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />}
                   </button>
                 </form>
               </div>

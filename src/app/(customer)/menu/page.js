@@ -5,6 +5,7 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { CATEGORIES } from '@/lib/constants';
 import MealCard from '@/components/customer/MealCard';
+import CategoryIcon from '@/components/customer/CategoryIcon';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -22,6 +23,7 @@ const SAMPLE_MEALS = [
 
 export default function MenuPage() {
   const [meals, setMeals] = useState([]);
+  const [allCategories, setAllCategories] = useState(CATEGORIES);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('default');
@@ -29,7 +31,26 @@ export default function MenuPage() {
 
   useEffect(() => {
     fetchMeals();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const catSnap = await getDocs(collection(db, 'categories'));
+      if (!catSnap.empty) {
+        const customCats = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const merged = [...CATEGORIES];
+        for (const c of customCats) {
+          if (!merged.find(m => m.id === c.id)) {
+            merged.push(c);
+          }
+        }
+        setAllCategories(merged);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchMeals = async () => {
     try {
@@ -102,14 +123,15 @@ export default function MenuPage() {
             className={`${styles.tab} ${activeCategory === 'all' ? styles.active : ''}`}
             onClick={() => setActiveCategory('all')} id="tab-all"
           >All</button>
-          {CATEGORIES.map(c => (
+          {allCategories.map(c => (
             <button
               key={c.id}
               className={`${styles.tab} ${activeCategory === c.id ? styles.active : ''}`}
               onClick={() => setActiveCategory(c.id)}
               id={`tab-${c.id}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
             >
-              {c.icon} {c.label}
+              <CategoryIcon name={c.icon} size={15} /> <span>{c.label}</span>
             </button>
           ))}
         </div>
