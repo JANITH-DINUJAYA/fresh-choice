@@ -252,6 +252,15 @@
   color: var(--fc-green-500);
 }
 
+.desktopHideCat {
+  display: none !important;
+}
+@media (max-width: 640px) {
+  .mobileHideCat {
+    display: none !important;
+  }
+}
+
 /* ======================== FEATURED MEALS ======================== */
 .featured {
   padding: 5rem 0;

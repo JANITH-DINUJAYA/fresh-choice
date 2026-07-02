@@ -483,17 +483,16 @@ export default function AdminMealsPage() {
                   {allCategories.map(cat => {
                     const isBuiltIn = !!CATEGORIES.find(c => c.id === cat.id);
                     return (
-                      <div key={cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '1.1rem', width: '24px', textAlign: 'center' }}>{cat.icon || '🍽️'}</span>
-                          <div>
-                            <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>{cat.label}</span>
-                            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem' }}>({cat.id})</span>
-                          </div>
-                          {isBuiltIn && <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: '4px' }}>built-in</span>}
+                      <div key={cat.id} style={{ display: 'flex', alignItems: 'center', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '1.1rem', width: '24px', textAlign: 'center', flexShrink: 0 }}>{cat.icon || '🍽️'}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', verticalAlign: 'middle' }}>{cat.label}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}>({cat.id})</span>
                         </div>
-                        {!isBuiltIn && (
-                          <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => handleDeleteCat(cat.id)} title="Delete category"><Trash2 size={13} /></button>
+                        {isBuiltIn ? (
+                          <span style={{ fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, fontWeight: 600 }}>built-in</span>
+                        ) : (
+                          <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => handleDeleteCat(cat.id)} title="Delete category" style={{ flexShrink: 0, margin: 0 }}><Trash2 size={13} /></button>
                         )}
                       </div>
                     );

@@ -158,20 +158,23 @@ export default function HomePage() {
             <h2 className="heading-xl">What We Offer</h2>
           </div>
           <div className={styles.categoryGrid}>
-            {allCategories.map(cat => (
-              <Link
-                key={cat.id}
-                href={`/menu?cat=${cat.slug}`}
-                className={styles.categoryCard}
-                id={`category-${cat.id}`}
-              >
-                <span className={styles.catIcon}>
-                  <CategoryIcon name={cat.icon} size={28} />
-                </span>
-                <span className={styles.catLabel}>{cat.label}</span>
-                <ChevronRight size={16} className={styles.catArrow} />
-              </Link>
-            ))}
+            {allCategories.map((cat, idx) => {
+              const hideClass = idx >= 10 ? styles.desktopHideCat : idx >= 6 ? styles.mobileHideCat : '';
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/menu?cat=${cat.slug}`}
+                  className={`${styles.categoryCard} ${hideClass}`}
+                  id={`category-${cat.id}`}
+                >
+                  <span className={styles.catIcon}>
+                    <CategoryIcon name={cat.icon} size={28} />
+                  </span>
+                  <span className={styles.catLabel}>{cat.label}</span>
+                  <ChevronRight size={16} className={styles.catArrow} />
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
