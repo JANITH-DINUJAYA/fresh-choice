@@ -8,6 +8,7 @@ import { formatPrice } from '@/lib/constants';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, Search, Eye, EyeOff, Loader2, Image as ImageIcon, X, Tag, ChevronDown } from 'lucide-react';
 import styles from './page.module.css';
+import CategoryIcon from '@/components/customer/CategoryIcon';
 
 const IMGBB_KEY = 'bbfda5a6eaea6c85b9c3125b4c8cc463';
 
@@ -484,7 +485,9 @@ export default function AdminMealsPage() {
                     const isBuiltIn = !!CATEGORIES.find(c => c.id === cat.id);
                     return (
                       <div key={cat.id} style={{ display: 'flex', alignItems: 'center', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '1.1rem', width: '24px', textAlign: 'center', flexShrink: 0 }}>{cat.icon || '🍽️'}</span>
+                        <span style={{ width: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--fc-green-500)' }}>
+                          <CategoryIcon name={cat.icon || '🍽️'} size={16} />
+                        </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', verticalAlign: 'middle' }}>{cat.label}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}>({cat.id})</span>
