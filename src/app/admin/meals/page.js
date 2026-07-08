@@ -55,13 +55,14 @@ export default function AdminMealsPage() {
       const mealsData = mealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setMeals(mealsData);
 
-      // Fetch custom categories
+      // Fetch custom categories from Firestore
       const catSnap = await getDocs(collection(db, 'categories'));
       const customCats = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setDbCategories(customCats);
 
-      // Merge: built-in + custom, dedup by id
-      const merged = [...CATEGORIES];
+      // Merge: start with built-ins, let Firestore data OVERRIDE same-id entries (preserves imageUrl)
+      const firestoreMap = Object.fromEntries(customCats.map(c => [c.id, c]));
+      const merged = CATEGORIES.map(b => firestoreMap[b.id] ? { ...b, ...firestoreMap[b.id] } : b);
       for (const c of customCats) {
         if (!merged.find(m => m.id === c.id)) merged.push(c);
       }
@@ -223,11 +224,11 @@ export default function AdminMealsPage() {
   };
 
   const handleDeleteCat = async (catId) => {
-    const isBuiltIn = !!CATEGORIES.find(c => c.id === catId);
-    const msg = isBuiltIn
-      ? `"${catId}" is a built-in category. Deleting it will remove it from the site. Are you sure?`
-      : 'Delete this category?';
-    if (!confirm(msg)) return;
+    if (CATEGORIES.find(c => c.id === catId)) {
+      toast.error('Built-in categories cannot be deleted');
+      return;
+    }
+    if (!confirm('Delete this category? Meals assigned to it will lose their category.')) return;
     try {
       await deleteDoc(doc(db, 'categories', catId));
       setDbCategories(p => p.filter(c => c.id !== catId));
@@ -516,22 +517,36 @@ export default function AdminMealsPage() {
                             {isBuiltIn && <span style={{ fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 5px', marginLeft: '6px', fontWeight: 600 }}>built-in</span>}
                             <span style={{ display: 'block', color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>{cat.id}</span>
                           </div>
-                          <button
-                            className={`${styles.actionBtn} ${styles.edit}`}
-                            onClick={() => handleOpenEditCat(cat)}
-                            title="Edit category"
-                            style={{ flexShrink: 0, margin: 0 }}
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button
-                            className={`${styles.actionBtn} ${styles.delete}`}
-                            onClick={() => handleDeleteCat(cat.id)}
-                            title="Delete category"
-                            style={{ flexShrink: 0, margin: 0 }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {/* Built-in: only allow photo upload. Custom: edit + delete */}
+                          {isBuiltIn ? (
+                            <button
+                              className={styles.actionBtn}
+                              onClick={() => handleOpenEditCat(cat)}
+                              title="Add / change photo"
+                              style={{ flexShrink: 0, margin: 0 }}
+                            >
+                              <ImageIcon size={12} />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className={`${styles.actionBtn} ${styles.edit}`}
+                                onClick={() => handleOpenEditCat(cat)}
+                                title="Edit category"
+                                style={{ flexShrink: 0, margin: 0 }}
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                className={`${styles.actionBtn} ${styles.delete}`}
+                                onClick={() => handleDeleteCat(cat.id)}
+                                title="Delete category"
+                                style={{ flexShrink: 0, margin: 0 }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       );
                     })}
@@ -587,29 +602,31 @@ export default function AdminMealsPage() {
                   />
                 </div>
 
-                {/* Name + Icon row */}
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Category Name *</label>
-                    <input
-                      className={`form-input ${styles.lightSelectInput}`}
-                      value={catForm.label}
-                      onChange={e => setCatForm({ ...catForm, label: e.target.value })}
-                      placeholder="e.g. Wraps & Sandwiches"
-                      required
-                    />
+                {/* Name + Icon row — hidden for built-in categories */}
+                {!CATEGORIES.find(c => c.id === editCatId) && (
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Category Name *</label>
+                      <input
+                        className={`form-input ${styles.lightSelectInput}`}
+                        value={catForm.label}
+                        onChange={e => setCatForm({ ...catForm, label: e.target.value })}
+                        placeholder="e.g. Wraps & Sandwiches"
+                        required={!CATEGORIES.find(c => c.id === editCatId)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ width: '80px', flexShrink: 0, margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Icon</label>
+                      <input
+                        className={`form-input ${styles.lightSelectInput}`}
+                        style={{ textAlign: 'center' }}
+                        value={catForm.icon}
+                        onChange={e => setCatForm({ ...catForm, icon: e.target.value })}
+                        placeholder="🌯"
+                      />
+                    </div>
                   </div>
-                  <div className="form-group" style={{ width: '80px', flexShrink: 0, margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Icon</label>
-                    <input
-                      className={`form-input ${styles.lightSelectInput}`}
-                      style={{ textAlign: 'center' }}
-                      value={catForm.icon}
-                      onChange={e => setCatForm({ ...catForm, icon: e.target.value })}
-                      placeholder="🌯"
-                    />
-                  </div>
-                </div>
+                )}
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

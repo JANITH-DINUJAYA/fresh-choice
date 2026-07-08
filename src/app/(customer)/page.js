@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { CATEGORIES } from '@/lib/constants';
 import MealCard from '@/components/customer/MealCard';
 import CategoryIcon from '@/components/customer/CategoryIcon';
-import { Leaf, Clock, Shield, ArrowRight, Truck } from 'lucide-react';
+import { Leaf, Clock, Shield, ArrowRight, Truck, Phone, Star, CheckCircle, Package } from 'lucide-react';
 import styles from './page.module.css';
 
 const SAMPLE_MEALS = [
@@ -22,8 +22,15 @@ const SAMPLE_MEALS = [
 
 const TESTIMONIALS = [
   { name: 'Asel Perera', location: 'Colombo 7', text: 'Fresh Choice changed my lunch routine completely! Everything tastes homemade because it is.', rating: 5 },
-  { name: 'Dinesh Karunarathne', location: 'Nugegoda', text: 'Best rice and curry delivery in Colombo. Tastes exactly like Amma\'s cooking!', rating: 5 },
+  { name: 'Dinesh Karunarathne', location: 'Nugegoda', text: "Best rice and curry delivery in Colombo. Tastes exactly like Amma's cooking!", rating: 5 },
   { name: 'Kavindi Silva', location: 'Maharagama', text: 'Finally healthy food that actually tastes amazing. The salads are so fresh!', rating: 5 },
+];
+
+const HOW_IT_WORKS = [
+  { step: '01', icon: <Package size={28} />, title: 'Browse Menu', desc: 'Explore our fresh daily menu — made from scratch every morning.' },
+  { step: '02', icon: <CheckCircle size={28} />, title: 'Place Order', desc: 'Pick your meals, choose delivery or schedule ahead, checkout in seconds.' },
+  { step: '03', icon: <Clock size={28} />, title: 'We Prepare', desc: 'Your meal is cooked fresh right after your order — never pre-packaged.' },
+  { step: '04', icon: <Truck size={28} />, title: 'Fast Delivery', desc: 'Hot and fresh to your door across Colombo, right on schedule.' },
 ];
 
 export default function HomePage() {
@@ -41,16 +48,14 @@ export default function HomePage() {
   const fetchCategories = async () => {
     try {
       const catSnap = await getDocs(collection(db, 'categories'));
-      if (!catSnap.empty) {
-        const customCats = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const merged = [...CATEGORIES];
-        for (const c of customCats) {
-          if (!merged.find(m => m.id === c.id)) {
-            merged.push(c);
-          }
-        }
-        setAllCategories(merged);
+      const customCats = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Let Firestore override built-ins so imageUrl and custom edits are preserved
+      const firestoreMap = Object.fromEntries(customCats.map(c => [c.id, c]));
+      const merged = CATEGORIES.map(b => firestoreMap[b.id] ? { ...b, ...firestoreMap[b.id] } : b);
+      for (const c of customCats) {
+        if (!merged.find(m => m.id === c.id)) merged.push(c);
       }
+      setAllCategories(merged);
     } catch (err) {
       console.error(err);
     }
@@ -95,17 +100,17 @@ export default function HomePage() {
             <em>Live Better.</em>
           </h1>
           <p className={styles.heroSub}>
-            Homemade healthy meals crafted with fresh ingredients — salads, rice & curry, and more — delivered to your door.
+            Homemade healthy meals crafted with fresh ingredients — salads, rice &amp; curry, and more — delivered to your door.
           </p>
           <div className={styles.heroActions}>
             <Link href="/menu" className="btn btn-primary btn-lg" id="hero-order-btn">
               Order Now <ArrowRight size={18} />
             </Link>
-            <Link href="/about" className={`btn btn-white btn-lg ${styles.btnOutlineHero}`} id="hero-about-btn">
+            <Link href="/about" className={`btn btn-lg ${styles.btnOutlineHero}`} id="hero-about-btn">
               Our Story
             </Link>
           </div>
-          
+
           <div className={styles.heroStats}>
             <div className={styles.stat}>
               <span className={styles.statNum}>500+</span>
@@ -118,7 +123,7 @@ export default function HomePage() {
             </div>
             <div className={styles.statDivider} />
             <div className={styles.stat}>
-              <span className={styles.statNum}>4.9</span>
+              <span className={styles.statNum}>4.9★</span>
               <span className={styles.statLabel}>Avg. Rating</span>
             </div>
           </div>
@@ -130,7 +135,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ======================== FEATURES ======================== */}
+      {/* ======================== FEATURES STRIP ======================== */}
       <section className={styles.features}>
         <div className="container">
           <div className={styles.featuresGrid}>
@@ -150,16 +155,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ======================== CATEGORIES ======================== */}
+      {/* ======================== CATEGORIES — PHOTO GRID ======================== */}
       <section className={styles.categories}>
         <div className={styles.catLayout}>
           {/* Left text column */}
           <div className={styles.catTextCol}>
             <p className={styles.sectionEyebrow}>Explore</p>
-            <h2>What We<br />Offer</h2>
-            <p>Fresh, wholesome meals across categories — crafted daily with love in Colombo.</p>
+            <h2 className={styles.catHeading}>What We<br />Offer</h2>
+            <p className={styles.catSubText}>Fresh, wholesome meals across categories — crafted daily with love in Colombo.</p>
             <Link href="/menu" className={styles.catViewAll} id="cat-view-gallery-btn">
-              View Gallery →
+              View Full Menu <ArrowRight size={14} />
             </Link>
           </div>
 
@@ -180,13 +185,14 @@ export default function HomePage() {
                   />
                 ) : (
                   <div className={styles.catTilePlaceholder}>
-                    <CategoryIcon name={cat.icon} size={40} />
+                    <div className={styles.catTilePlaceholderIcon}>
+                      <CategoryIcon name={cat.icon} size={36} />
+                    </div>
                   </div>
                 )}
                 <div className={styles.catTileOverlay} />
                 <div className={styles.catTileText}>
                   <span className={styles.catTileName}>{cat.label}</span>
-                  <span className={styles.catTileLabel}>{cat.id}</span>
                 </div>
               </Link>
             ))}
@@ -194,6 +200,27 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ======================== HOW IT WORKS ======================== */}
+      <section className={styles.howItWorks}>
+        <div className="container">
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionEyebrow}>Simple Process</p>
+            <h2 className="heading-xl">How It Works</h2>
+            <p className={styles.sectionSub}>From click to your door in 4 easy steps</p>
+          </div>
+          <div className={styles.stepsGrid}>
+            {HOW_IT_WORKS.map((step, i) => (
+              <div key={i} className={styles.stepCard}>
+                <div className={styles.stepNum}>{step.step}</div>
+                <div className={styles.stepIcon}>{step.icon}</div>
+                <h3 className={styles.stepTitle}>{step.title}</h3>
+                <p className={styles.stepDesc}>{step.desc}</p>
+                {i < HOW_IT_WORKS.length - 1 && <div className={styles.stepConnector} />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ======================== FEATURED MEALS ======================== */}
       <section className={styles.featured}>
@@ -239,6 +266,26 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ======================== STATS BANNER ======================== */}
+      <section className={styles.statsBanner}>
+        <div className="container">
+          <div className={styles.statsBannerGrid}>
+            {[
+              { num: '500+', label: 'Orders Delivered', icon: <Truck size={24} /> },
+              { num: '4.9★', label: 'Customer Rating', icon: <Star size={24} /> },
+              { num: '100%', label: 'Homemade', icon: <Leaf size={24} /> },
+              { num: '30+', label: 'Menu Items', icon: <Package size={24} /> },
+            ].map((s, i) => (
+              <div key={i} className={styles.statsBannerItem}>
+                <div className={styles.statsBannerIcon}>{s.icon}</div>
+                <span className={styles.statsBannerNum}>{s.num}</span>
+                <span className={styles.statsBannerLabel}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ======================== ABOUT TEASER ======================== */}
       <section className={styles.aboutTeaser}>
         <div className="container">
@@ -263,12 +310,17 @@ export default function HomePage() {
               <p className={styles.sectionEyebrow}>Our Story</p>
               <h2 className="heading-xl">Food Made with Love, <em>Not Labels</em></h2>
               <p className={styles.aboutText}>
-                Fresh Choice started as a passion project — bringing wholesome, honest food to busy people in Colombo. 
+                Fresh Choice started as a passion project — bringing wholesome, honest food to busy people in Colombo.
                 Every meal is prepared fresh each morning using locally sourced ingredients. No shortcuts, no preservatives.
               </p>
               <p className={styles.aboutText}>
                 What began on TikTok as a small food venture has grown into a trusted homemade meal service loved by hundreds of families across Colombo.
               </p>
+              <div className={styles.aboutBadges}>
+                {['No Preservatives', 'Locally Sourced', 'Made Daily', 'Hygiene Certified'].map(b => (
+                  <span key={b} className={styles.aboutBadge}><CheckCircle size={13} /> {b}</span>
+                ))}
+              </div>
               <Link href="/about" className="btn btn-primary" id="home-about-btn">
                 Learn More <ArrowRight size={16} />
               </Link>
@@ -287,9 +339,10 @@ export default function HomePage() {
           <div className={styles.testimonialsGrid}>
             {TESTIMONIALS.map((t, i) => (
               <div key={i} className={styles.testimonialCard}>
-                {/* Emojis/Stars removed from ratings */}
-                <div className={styles.ratingText}>
-                  Rating: {t.rating}/5
+                <div className={styles.starRow}>
+                  {Array.from({ length: t.rating }).map((_, s) => (
+                    <Star key={s} size={14} fill="#d4b97a" color="#d4b97a" />
+                  ))}
                 </div>
                 <p className={styles.testimonialText}>"{t.text}"</p>
                 <div className={styles.testimonialAuthor}>
@@ -305,6 +358,27 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ======================== CONTACT CTA ======================== */}
+      <section className={styles.contactCta}>
+        <div className="container">
+          <div className={styles.contactCtaGrid}>
+            <div className={styles.contactCtaText}>
+              <p className={styles.sectionEyebrow}>Get In Touch</p>
+              <h2 className="heading-lg">Have Questions?<br />We're Here to Help.</h2>
+              <p className={styles.contactCtaSub}>Reach us on WhatsApp, TikTok or call us directly. We respond fast!</p>
+            </div>
+            <div className={styles.contactCtaActions}>
+              <a href="tel:+94000000000" className="btn btn-primary btn-lg" id="cta-call-btn">
+                <Phone size={18} /> Call Us
+              </a>
+              <Link href="/contact" className={`btn btn-outline btn-lg ${styles.contactBtnOutline}`} id="cta-contact-btn">
+                Contact Page
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ======================== CTA BANNER ======================== */}
       <section className={styles.ctaBanner}>
         <div className="container">
@@ -316,9 +390,6 @@ export default function HomePage() {
             <div className={styles.ctaActions}>
               <Link href="/menu" className="btn btn-white btn-lg" id="cta-order-btn">
                 Order Now <ArrowRight size={18} />
-              </Link>
-              <Link href="/contact" className="btn btn-outline" style={{ borderColor: 'rgba(255,255,255,0.5)', color: 'white' }} id="cta-contact-btn">
-                Contact Us
               </Link>
             </div>
           </div>
