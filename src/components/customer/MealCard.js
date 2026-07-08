@@ -106,7 +106,7 @@ export default function MealCard({ meal }) {
           <span className={styles.price}>{formatPrice(meal.price)}</span>
           {meal.rating && (
             <span className={styles.rating}>
-              ★ {meal.rating}
+              {meal.rating}
             </span>
           )}
         </div>

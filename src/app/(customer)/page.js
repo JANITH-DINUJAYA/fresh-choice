@@ -123,7 +123,7 @@ export default function HomePage() {
             </div>
             <div className={styles.statDivider} />
             <div className={styles.stat}>
-              <span className={styles.statNum}>4.9★</span>
+              <span className={styles.statNum}>4.9</span>
               <span className={styles.statLabel}>Avg. Rating</span>
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function HomePage() {
           <div className={styles.statsBannerGrid}>
             {[
               { num: '500+', label: 'Orders Delivered', icon: <Truck size={24} /> },
-              { num: '4.9★', label: 'Customer Rating', icon: <Star size={24} /> },
+              { num: '4.9', label: 'Customer Rating', icon: <Star size={24} /> },
               { num: '100%', label: 'Homemade', icon: <Leaf size={24} /> },
               { num: '30+', label: 'Menu Items', icon: <Package size={24} /> },
             ].map((s, i) => (
