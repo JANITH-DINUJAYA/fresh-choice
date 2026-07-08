@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { CATEGORIES } from '@/lib/constants';
 import MealCard from '@/components/customer/MealCard';
 import CategoryIcon from '@/components/customer/CategoryIcon';
-import { ChevronRight, Leaf, Clock, Shield, ArrowRight, Truck } from 'lucide-react';
+import { Leaf, Clock, Shield, ArrowRight, Truck } from 'lucide-react';
 import styles from './page.module.css';
 
 const SAMPLE_MEALS = [
@@ -152,32 +152,48 @@ export default function HomePage() {
 
       {/* ======================== CATEGORIES ======================== */}
       <section className={styles.categories}>
-        <div className="container">
-          <div className={styles.sectionHeader}>
+        <div className={styles.catLayout}>
+          {/* Left text column */}
+          <div className={styles.catTextCol}>
             <p className={styles.sectionEyebrow}>Explore</p>
-            <h2 className="heading-xl">What We Offer</h2>
+            <h2>What We<br />Offer</h2>
+            <p>Fresh, wholesome meals across categories — crafted daily with love in Colombo.</p>
+            <Link href="/menu" className={styles.catViewAll} id="cat-view-gallery-btn">
+              View Gallery →
+            </Link>
           </div>
-          <div className={styles.categoryGrid}>
-            {allCategories.map((cat, idx) => {
-              const hideClass = idx >= 10 ? styles.desktopHideCat : idx >= 6 ? styles.mobileHideCat : '';
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/menu?cat=${cat.slug}`}
-                  className={`${styles.categoryCard} ${hideClass}`}
-                  id={`category-${cat.id}`}
-                >
-                  <span className={styles.catIcon}>
-                    <CategoryIcon name={cat.icon} size={28} />
-                  </span>
-                  <span className={styles.catLabel}>{cat.label}</span>
-                  <ChevronRight size={16} className={styles.catArrow} />
-                </Link>
-              );
-            })}
+
+          {/* Right photo grid */}
+          <div className={styles.catPhotoGrid}>
+            {allCategories.slice(0, 8).map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/menu?cat=${cat.slug}`}
+                className={styles.catPhotoTile}
+                id={`category-${cat.id}`}
+              >
+                {cat.imageUrl ? (
+                  <img
+                    src={cat.imageUrl}
+                    alt={cat.label}
+                    className={styles.catTileImg}
+                  />
+                ) : (
+                  <div className={styles.catTilePlaceholder}>
+                    <CategoryIcon name={cat.icon} size={40} />
+                  </div>
+                )}
+                <div className={styles.catTileOverlay} />
+                <div className={styles.catTileText}>
+                  <span className={styles.catTileName}>{cat.label}</span>
+                  <span className={styles.catTileLabel}>{cat.id}</span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
+
 
       {/* ======================== FEATURED MEALS ======================== */}
       <section className={styles.featured}>

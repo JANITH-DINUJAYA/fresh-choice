@@ -42,6 +42,7 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   const navLinks = [
+    { href: '/', label: 'Home' },
     { href: '/menu', label: 'Menu' },
     { href: '/orders', label: 'Track Order' },
     { href: '/about', label: 'About' },

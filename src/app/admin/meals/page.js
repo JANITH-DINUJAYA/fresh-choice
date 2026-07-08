@@ -38,6 +38,10 @@ export default function AdminMealsPage() {
   const [catForm, setCatForm] = useState({ label: '', id: '', icon: '🍽️' });
   const [editCatId, setEditCatId] = useState(null);
   const [savingCat, setSavingCat] = useState(false);
+  const [catImageFile, setCatImageFile] = useState(null);
+  const [catImagePreview, setCatImagePreview] = useState(null);
+  const [catImageUploading, setCatImageUploading] = useState(false);
+  const catFileInputRef = useRef(null);
 
   useEffect(() => {
     fetchAll();
@@ -205,19 +209,25 @@ export default function AdminMealsPage() {
   const handleOpenAddCat = () => {
     setEditCatId(null);
     setCatForm({ label: '', id: '', icon: '' });
+    setCatImageFile(null);
+    setCatImagePreview(null);
     setShowCatModal(true);
   };
 
   const handleOpenEditCat = (cat) => {
     setEditCatId(cat.id);
     setCatForm({ label: cat.label, id: cat.id, icon: cat.icon || '' });
+    setCatImageFile(null);
+    setCatImagePreview(cat.imageUrl || null);
     setShowCatModal(true);
   };
 
   const handleDeleteCat = async (catId) => {
-    // Only allow deleting custom (non-built-in) categories
-    if (CATEGORIES.find(c => c.id === catId)) { toast.error('Cannot delete a built-in category'); return; }
-    if (!confirm('Delete this category?')) return;
+    const isBuiltIn = !!CATEGORIES.find(c => c.id === catId);
+    const msg = isBuiltIn
+      ? `"${catId}" is a built-in category. Deleting it will remove it from the site. Are you sure?`
+      : 'Delete this category?';
+    if (!confirm(msg)) return;
     try {
       await deleteDoc(doc(db, 'categories', catId));
       setDbCategories(p => p.filter(c => c.id !== catId));
@@ -234,8 +244,14 @@ export default function AdminMealsPage() {
     setSavingCat(true);
     const slugId = editCatId || catForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const chosenIcon = catForm.icon.trim() || getAutoEmoji(catForm.label);
-    const catData = { label: catForm.label, id: slugId, icon: chosenIcon, slug: slugId };
     try {
+      let imageUrl = catImagePreview && !catImageFile ? catImagePreview : null;
+      if (catImageFile) {
+        setCatImageUploading(true);
+        imageUrl = await uploadImageToImgbb(catImageFile);
+        setCatImageUploading(false);
+      }
+      const catData = { label: catForm.label, id: slugId, icon: chosenIcon, slug: slugId, ...(imageUrl ? { imageUrl } : {}) };
       await setDoc(doc(db, 'categories', slugId), catData);
       if (editCatId) {
         setDbCategories(p => p.map(c => c.id === editCatId ? catData : c));
@@ -249,6 +265,7 @@ export default function AdminMealsPage() {
       setShowCatModal(false);
     } catch {
       toast.error('Failed to save category');
+      setCatImageUploading(false);
     } finally {
       setSavingCat(false);
     }
@@ -471,42 +488,107 @@ export default function AdminMealsPage() {
       {/* Category Management Modal */}
       {showCatModal && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
+          <div className={styles.modal} style={{ maxWidth: '520px' }}>
             <div className={styles.modalHead}>
-              <h2>Manage Categories</h2>
+              <h2>{editCatId ? 'Edit Category' : 'Manage Categories'}</h2>
               <button className={styles.modalClose} onClick={() => setShowCatModal(false)}>×</button>
             </div>
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Existing categories list */}
-              <div>
-                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>All Categories</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {allCategories.map(cat => {
-                    const isBuiltIn = !!CATEGORIES.find(c => c.id === cat.id);
-                    return (
-                      <div key={cat.id} style={{ display: 'flex', alignItems: 'center', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', gap: '0.75rem' }}>
-                        <span style={{ width: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--fc-green-500)' }}>
-                          <CategoryIcon name={cat.icon || '🍽️'} size={16} />
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem', verticalAlign: 'middle' }}>{cat.label}</span>
-                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}>({cat.id})</span>
-                        </div>
-                        {isBuiltIn ? (
-                          <span style={{ fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, fontWeight: 600 }}>built-in</span>
-                        ) : (
-                          <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => handleDeleteCat(cat.id)} title="Delete category" style={{ flexShrink: 0, margin: 0 }}><Trash2 size={13} /></button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0', maxHeight: '70vh', overflowY: 'auto' }}>
 
-              {/* Add new category */}
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem' }}>
-                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Add New Category</p>
-                <form onSubmit={handleSaveCat} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+              {/* Category list */}
+              {!editCatId && (
+                <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>All Categories</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {allCategories.map(cat => {
+                      const isBuiltIn = !!CATEGORIES.find(c => c.id === cat.id);
+                      return (
+                        <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          {/* Thumbnail */}
+                          <div style={{ width: 40, height: 40, flexShrink: 0, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {cat.imageUrl
+                              ? <img src={cat.imageUrl} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : <span style={{ color: 'var(--fc-green-400)', opacity: 0.7 }}><CategoryIcon name={cat.icon || '🍽️'} size={16} /></span>
+                            }
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>{cat.label}</span>
+                            {isBuiltIn && <span style={{ fontSize: '0.65rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '1px 5px', marginLeft: '6px', fontWeight: 600 }}>built-in</span>}
+                            <span style={{ display: 'block', color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>{cat.id}</span>
+                          </div>
+                          <button
+                            className={`${styles.actionBtn} ${styles.edit}`}
+                            onClick={() => handleOpenEditCat(cat)}
+                            title="Edit category"
+                            style={{ flexShrink: 0, margin: 0 }}
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            className={`${styles.actionBtn} ${styles.delete}`}
+                            onClick={() => handleDeleteCat(cat.id)}
+                            title="Delete category"
+                            style={{ flexShrink: 0, margin: 0 }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Add / Edit form */}
+              <form onSubmit={handleSaveCat} style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {editCatId ? `Editing: ${catForm.label || editCatId}` : 'Add New Category'}
+                </p>
+
+                {/* Photo upload */}
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px' }}>Category Photo</label>
+                  <div
+                    style={{
+                      width: '100%', height: '140px', background: 'rgba(255,255,255,0.04)',
+                      border: '1.5px dashed rgba(255,255,255,0.15)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      overflow: 'hidden', position: 'relative'
+                    }}
+                    onClick={() => catFileInputRef.current?.click()}
+                  >
+                    {catImagePreview ? (
+                      <>
+                        <img src={catImagePreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setCatImageFile(null); setCatImagePreview(null); }}
+                          style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: 0, width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        ><X size={12} /></button>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>
+                        <ImageIcon size={28} />
+                        <p style={{ fontSize: '0.75rem', marginTop: '6px' }}>Click to upload photo</p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={catFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setCatImageFile(file);
+                      setCatImagePreview(URL.createObjectURL(file));
+                    }}
+                  />
+                </div>
+
+                {/* Name + Icon row */}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <div className="form-group" style={{ flex: 1, margin: 0 }}>
                     <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Category Name *</label>
                     <input
@@ -517,21 +599,31 @@ export default function AdminMealsPage() {
                       required
                     />
                   </div>
-                  <div className="form-group" style={{ width: '90px', flexShrink: 0, margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Icon / Emoji</label>
+                  <div className="form-group" style={{ width: '80px', flexShrink: 0, margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Icon</label>
                     <input
                       className={`form-input ${styles.lightSelectInput}`}
                       style={{ textAlign: 'center' }}
                       value={catForm.icon}
                       onChange={e => setCatForm({ ...catForm, icon: e.target.value })}
-                      placeholder="e.g. 🌯"
+                      placeholder="🌯"
                     />
                   </div>
-                  <button type="submit" className="btn btn-primary" disabled={savingCat} style={{ flexShrink: 0, height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {savingCat ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  {editCatId && (
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: '0.85rem' }} onClick={() => { setEditCatId(null); setCatImageFile(null); setCatImagePreview(null); setCatForm({ label: '', id: '', icon: '' }); }}>
+                      ← Back to list
+                    </button>
+                  )}
+                  <button type="submit" className="btn btn-primary" disabled={savingCat || catImageUploading} style={{ fontSize: '0.875rem' }}>
+                    {(savingCat || catImageUploading) ? <Loader2 size={14} className={styles.spin} /> : null}
+                    {catImageUploading ? 'Uploading...' : savingCat ? 'Saving...' : editCatId ? 'Save Changes' : 'Add Category'}
                   </button>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
