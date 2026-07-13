@@ -252,15 +252,81 @@
 .catPhotoGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(2, 200px);
+  grid-template-rows: repeat(2, 220px);
   gap: 2px;
 }
-@media (max-width: 1100px) {
-  .catPhotoGrid { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 200px); }
+
+/* Staggered dynamic spans for desktop (width > 1100px) */
+/* 5 items: first 3 are large (2 columns each), last 2 are standard. Total = 2 rows of 4 cols */
+.catPhotoGrid[data-total="5"] > [data-index="0"],
+.catPhotoGrid[data-total="5"] > [data-index="1"],
+.catPhotoGrid[data-total="5"] > [data-index="2"] {
+  grid-column: span 2;
 }
+
+/* 6 items: first 2 are large (2 columns each), last 4 are standard. Total = 2 rows of 4 cols */
+.catPhotoGrid[data-total="6"] > [data-index="0"],
+.catPhotoGrid[data-total="6"] > [data-index="1"] {
+  grid-column: span 2;
+}
+
+/* 7 items: first 1 is large (2 columns), last 6 are standard. Total = 2 rows of 4 cols */
+.catPhotoGrid[data-total="7"] > [data-index="0"] {
+  grid-column: span 2;
+}
+
+/* 3 items: first is large (2 columns), last 2 are standard. Total = 1 row of 4 cols */
+.catPhotoGrid[data-total="3"] > [data-index="0"] {
+  grid-column: span 2;
+}
+
+/* 2 items: both are large (2 columns each). Total = 1 row of 4 cols */
+.catPhotoGrid[data-total="2"] > [data-index="0"],
+.catPhotoGrid[data-total="2"] > [data-index="1"] {
+  grid-column: span 2;
+}
+
+/* 1 item: spans all 4 columns */
+.catPhotoGrid[data-total="1"] > [data-index="0"] {
+  grid-column: span 4;
+}
+
+@media (max-width: 1100px) {
+  .catPhotoGrid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto;
+  }
+  .catPhotoGrid > [data-index] {
+    grid-column: span 1 !important;
+  }
+  /* 5 items on tablet: make first item span 2 columns so it fills 2 rows of 3 cols perfectly */
+  .catPhotoGrid[data-total="5"] > [data-index="0"] {
+    grid-column: span 2 !important;
+  }
+  /* 2 items on tablet: make first item span 2 columns so it fills 1 row of 3 cols perfectly */
+  .catPhotoGrid[data-total="2"] > [data-index="0"] {
+    grid-column: span 2 !important;
+  }
+}
+
 @media (max-width: 640px) {
-  .catPhotoGrid { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; }
-  .catPhotoTile { height: 130px; }
+  .catPhotoGrid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+  }
+  .catPhotoGrid > [data-index] {
+    grid-column: span 1 !important;
+  }
+  .catPhotoTile {
+    height: 140px;
+  }
+  /* On mobile (2 columns), if total items is odd, first item spans 2 columns to fill row with NO GAPS */
+  .catPhotoGrid[data-total="1"] > [data-index="0"],
+  .catPhotoGrid[data-total="3"] > [data-index="0"],
+  .catPhotoGrid[data-total="5"] > [data-index="0"],
+  .catPhotoGrid[data-total="7"] > [data-index="0"] {
+    grid-column: span 2 !important;
+  }
 }
 .catPhotoTile {
   position: relative;

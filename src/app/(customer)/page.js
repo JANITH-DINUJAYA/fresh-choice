@@ -169,12 +169,13 @@ export default function HomePage() {
           </div>
 
           {/* Right photo grid */}
-          <div className={styles.catPhotoGrid}>
-            {allCategories.slice(0, 8).map((cat) => (
+          <div className={styles.catPhotoGrid} data-total={allCategories.slice(0, 8).length}>
+            {allCategories.slice(0, 8).map((cat, idx) => (
               <Link
                 key={cat.id}
                 href={`/menu?cat=${cat.slug}`}
                 className={styles.catPhotoTile}
+                data-index={idx}
                 id={`category-${cat.id}`}
               >
                 {cat.imageUrl ? (

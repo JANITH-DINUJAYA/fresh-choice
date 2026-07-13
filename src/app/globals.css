@@ -338,6 +338,14 @@ input, textarea, select {
   color: var(--fc-green-800);
 }
 
+/* Dark theme form-label override for Admin panel and modals */
+[class*="shell"] .form-label,
+[class*="modalOverlay"] .form-label,
+[class*="modalForm"] .form-label,
+[class*="modal"] .form-label {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
 .form-input {
   width: 100%;
   padding: 0.75rem 1rem;
