@@ -157,7 +157,7 @@ export default function HomePage() {
 
       {/* ======================== CATEGORIES — PHOTO GRID ======================== */}
       <section className={styles.categories}>
-        <div className={styles.catLayout}>
+        <div className={styles.catLayout} data-total={allCategories.slice(0, 8).length}>
           {/* Left text column */}
           <div className={styles.catTextCol}>
             <p className={styles.sectionEyebrow}>Explore</p>
