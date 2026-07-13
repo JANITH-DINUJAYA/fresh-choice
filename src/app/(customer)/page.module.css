@@ -252,8 +252,17 @@
 .catPhotoGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(2, 220px);
+  grid-template-rows: 1fr;
   gap: 2px;
+  min-height: 520px;
+  height: 100%;
+}
+
+.catPhotoGrid[data-total="5"],
+.catPhotoGrid[data-total="6"],
+.catPhotoGrid[data-total="7"],
+.catPhotoGrid[data-total="8"] {
+  grid-template-rows: repeat(2, 1fr);
 }
 
 /* Staggered dynamic spans for desktop (width > 1100px) */
@@ -306,6 +315,14 @@
   /* 2 items on tablet: make first item span 2 columns so it fills 1 row of 3 cols perfectly */
   .catPhotoGrid[data-total="2"] > [data-index="0"] {
     grid-column: span 2 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .catPhotoGrid {
+    min-height: auto !important;
+    height: auto !important;
+    grid-template-rows: auto !important;
   }
 }
 
